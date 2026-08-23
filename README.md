@@ -1,10 +1,12 @@
 # TypeSprint
 
-A visual, gamified typing speed trainer — a single self-contained web page, no install required.
+A visual, gamified typing speed trainer, built as a small vanilla JS web app (ES modules, no build step, no framework).
+
+## Play it now
+
+**[typesprint-sable.vercel.app](https://typesprint-sable.vercel.app)** — no install, no account needed for solo play.
 
 ## How to play
-
-Just double-click **`index.html`** to open it in your browser (Chrome, Edge, or Firefox all work). It runs entirely offline — no server, no internet connection, no account.
 
 1. Pick a difficulty on the menu (or **Auto**, which adapts to your recent accuracy/speed).
 2. Hit **Start Race**, wait for the 3-2-1 countdown, then type the passage exactly as shown.
@@ -23,3 +25,21 @@ Just double-click **`index.html`** to open it in your browser (Chrome, Edge, or 
 All progress (history, achievements, themes, settings) is stored only in your browser's `localStorage`, under the key `typingGame.v1`. Nothing is sent anywhere. Progress is per-browser — it won't follow you to a different browser or computer.
 
 To wipe your progress and start fresh, use the **Reset Progress** button on the menu (you'll be asked to confirm first).
+
+## Local development
+
+The app is split into ES modules under `js/`, loaded via `<script type="module">`. Modern browsers won't reliably load modules from a `file://` double-click, so serve the folder over `http://` instead. If you have Python or Node installed:
+
+```bash
+python -m http.server 8000
+# or
+npx serve .
+```
+
+If neither is available, this repo includes a zero-dependency PowerShell static server:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\_devserver.ps1 -Port 8123
+```
+
+Then open `http://localhost:8000` (or whichever port you used).
