@@ -126,8 +126,9 @@
   body[data-screen="results"] #screen-results { display: block; }
   body[data-screen="history"] #screen-history { display: block; }
   body[data-screen="achievements"] #screen-achievements { display: block; }
-  body[data-screen="auth"] #screen-auth { display: block; }
-  body[data-screen="multiplayer-lobby"] #screen-multiplayer-lobby { display: block; }
+  body[data-screen="multiplayer-home"] #screen-multiplayer-home { display: block; }
+  body[data-screen="room"] #screen-room { display: block; }
+  body[data-screen="race-multiplayer-results"] #screen-race-multiplayer-results { display: block; }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
@@ -211,9 +212,15 @@
   #caret {
     position: absolute; width: 2px; height: 1.9rem; background: var(--caret); top: .2rem; left: 0;
     box-shadow: 0 0 8px var(--caret); transition: transform .06s linear; animation: blink 1s step-end infinite;
+    pointer-events: none;
   }
   @keyframes blink { 50% { opacity: 0; } }
 
+  #race-input {
+    position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0;
+    background: transparent; color: transparent; outline: none; cursor: default;
+    font-size: 16px; /* prevents iOS auto-zoom on focus */
+  }
   #particle-layer { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
   .spark {
     position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2);
@@ -299,6 +306,26 @@
   .text-input:focus { border-color: var(--accent); }
   .form-error { color: var(--incorrect); font-size: .8rem; margin-top: .5rem; min-height: 1em; }
 
+  /* ============ CAR TRACK (multiplayer race) ============ */
+  #mp-track { display: none; margin-bottom: 1.25rem; }
+  #mp-track.active { display: block; }
+  .mp-lane { margin-bottom: .6rem; }
+  .mp-lane-label { font-size: .75rem; color: var(--fg-dim); margin-bottom: .25rem; font-weight: 700; }
+  .mp-lane-label.self { color: var(--accent); }
+  .mp-lane-track {
+    position: relative; height: 2.1rem; background: var(--bg-alt); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+  }
+  .mp-lane-track::after {
+    content: ''; position: absolute; right: 6px; top: 3px; bottom: 3px; width: 2px;
+    background: var(--accent-2); opacity: .6;
+  }
+  .mp-car {
+    position: absolute; top: 50%; left: 0%; transform: translate(0, -50%);
+    transition: left .2s linear; font-size: 1.4rem; line-height: 1;
+  }
+  .mp-car.finished { filter: drop-shadow(0 0 6px var(--accent)); }
+
   @media (max-width: 640px) {
     .results-hero .wpm-big { font-size: 3.2rem; }
     #race-container { font-size: 1.15rem; line-height: 1.9rem; padding: 1.25rem 1rem; }
@@ -359,6 +386,7 @@
 
   <!-- ===================== RACE ===================== -->
   <main id="screen-race">
+    <div id="mp-track"></div>
     <div class="hud">
       <div class="hud-stat"><div class="val" id="hud-wpm">0</div><div class="lbl">WPM</div></div>
       <div class="hud-stat"><div class="val" id="hud-accuracy">100%</div><div class="lbl">Accuracy</div></div>
@@ -366,13 +394,14 @@
       <div class="hud-stat"><div class="val" id="hud-time">0.0s</div><div class="lbl">Time</div></div>
     </div>
     <div class="progress-bar-outer"><div class="progress-bar-inner" id="progress-bar"></div></div>
-    <div id="race-container" tabindex="0">
+    <div id="race-container">
       <div id="passage-text"></div>
       <div id="caret"></div>
       <div id="particle-layer"></div>
+      <input id="race-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Type the passage">
     </div>
     <div class="race-footer">
-      <span class="hint">Click the box above and start typing to begin.</span>
+      <span class="hint">Tap or click the box above and start typing to begin.</span>
       <button class="btn btn-ghost" id="race-quit-btn">Quit to Menu</button>
     </div>
   </main>
@@ -425,77 +454,66 @@
     </div>
   </main>
 
-  <!-- ===================== AUTH ===================== -->
-  <main id="screen-auth">
-    <a class="back-link" id="auth-back-btn">← Back to Menu</a>
+  <!-- ===================== MULTIPLAYER HOME (Among-Us-style: name, then Create/Join) ===================== -->
+  <main id="screen-multiplayer-home">
+    <a class="back-link" id="mph-back-btn">← Back to Menu</a>
     <h1 class="title">Play <span>Online</span></h1>
-    <p class="subtitle">Sign in to create or join private multiplayer rooms.</p>
+    <p class="subtitle">Pick a name, then create a room or join one with a code.</p>
 
-    <div id="auth-signed-out">
-      <div class="row" id="auth-tabs">
-        <button class="btn active" data-tab="guest">Guest</button>
-        <button class="btn" data-tab="signup">Sign Up</button>
-        <button class="btn" data-tab="login">Log In</button>
-      </div>
-
-      <div class="card" id="auth-panel-guest">
-        <div class="section-title">Play as Guest</div>
-        <input class="text-input" id="guest-nickname" placeholder="Pick a nickname" maxlength="20">
-        <button class="btn-primary" id="guest-submit-btn" style="margin-top:.8rem;">Continue as Guest ▶</button>
-        <div class="form-error" id="guest-error"></div>
-      </div>
-
-      <div class="card" id="auth-panel-signup" style="display:none;">
-        <div class="section-title">Create Account</div>
-        <input class="text-input" id="signup-nickname" placeholder="Nickname" maxlength="20">
-        <input class="text-input" id="signup-email" type="email" placeholder="Email" style="margin-top:.6rem;">
-        <input class="text-input" id="signup-password" type="password" placeholder="Password (6+ characters)" style="margin-top:.6rem;">
-        <button class="btn-primary" id="signup-submit-btn" style="margin-top:.8rem;">Sign Up ▶</button>
-        <div class="form-error" id="signup-error"></div>
-      </div>
-
-      <div class="card" id="auth-panel-login" style="display:none;">
-        <div class="section-title">Log In</div>
-        <input class="text-input" id="login-email" type="email" placeholder="Email">
-        <input class="text-input" id="login-password" type="password" placeholder="Password" style="margin-top:.6rem;">
-        <button class="btn-primary" id="login-submit-btn" style="margin-top:.8rem;">Log In ▶</button>
-        <div class="form-error" id="login-error"></div>
-      </div>
+    <div class="card">
+      <div class="section-title">Your Name</div>
+      <input class="text-input" id="mph-nickname" placeholder="Pick a nickname" maxlength="20">
     </div>
 
-    <div id="auth-signed-in" style="display:none;">
-      <div class="card">
-        <div class="section-title">Signed in as</div>
-        <div id="auth-account-summary" style="font-size:1.2rem; font-weight:800;"></div>
-      </div>
+    <div class="card">
+      <div class="section-title">Create Game</div>
+      <div class="row" id="mph-difficulty-row"></div>
+      <button class="btn-primary" id="mph-create-btn" style="margin-top:.8rem;">Create Room ▶</button>
+      <div class="form-error" id="mph-create-error"></div>
+    </div>
 
-      <div class="card" id="auth-upgrade-card" style="display:none;">
-        <div class="section-title">Save Your Progress</div>
-        <div class="hint" style="margin-bottom:.8rem;">You're playing as a guest. Add an email + password to keep this identity across devices.</div>
-        <input class="text-input" id="upgrade-email" type="email" placeholder="Email">
-        <input class="text-input" id="upgrade-password" type="password" placeholder="Password (6+ characters)" style="margin-top:.6rem;">
-        <button class="btn-primary" id="upgrade-submit-btn" style="margin-top:.8rem;">Save Account ▶</button>
-        <div class="form-error" id="upgrade-error"></div>
-      </div>
-
-      <div class="row">
-        <button class="btn-primary" id="auth-continue-btn">Continue to Multiplayer ▶</button>
-        <button class="btn btn-ghost btn-danger" id="auth-logout-btn">Log Out</button>
-      </div>
+    <div class="card">
+      <div class="section-title">Join Game</div>
+      <input class="text-input" id="mph-join-code" placeholder="6-character code" maxlength="6" style="text-transform:uppercase; letter-spacing:.2em; font-weight:800; text-align:center;">
+      <button class="btn-primary" id="mph-join-btn" style="margin-top:.8rem;">Join Room ▶</button>
+      <div class="form-error" id="mph-join-error"></div>
     </div>
   </main>
 
-  <!-- ===================== MULTIPLAYER LOBBY (stub — rooms land in the next update) ===================== -->
-  <main id="screen-multiplayer-lobby">
-    <a class="back-link" id="lobby-back-btn">← Back to Menu</a>
-    <h1 class="title">Multiplayer <span>Lobby</span></h1>
+  <!-- ===================== ROOM (lobby) ===================== -->
+  <main id="screen-room">
+    <a class="back-link" id="room-leave-btn">← Leave Room</a>
+    <h1 class="title">Room <span id="room-code-display">------</span></h1>
+    <p class="subtitle">Share this code with friends — they can join from the Multiplayer menu.</p>
+
     <div class="card">
-      <div class="section-title">Signed in as</div>
-      <div id="lobby-account-summary" style="font-size:1.2rem; font-weight:800; margin-bottom:.6rem;"></div>
-      <div class="hint">Private rooms (create or join by code) are coming in the next update — your account is ready to go.</div>
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div class="hint" id="room-difficulty-label"></div>
+        <button class="btn btn-ghost" id="room-copy-link-btn">Copy Invite Link</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Players</div>
+      <div id="room-player-list"></div>
+    </div>
+
+    <div class="row">
+      <button class="btn-primary" id="room-start-btn" style="display:none;">Start Race ▶</button>
+      <button class="btn btn-ghost" id="room-ready-btn">I'm Ready</button>
+    </div>
+    <div class="form-error" id="room-error"></div>
+  </main>
+
+  <!-- ===================== RACE RESULTS (multiplayer leaderboard) ===================== -->
+  <main id="screen-race-multiplayer-results">
+    <h1 class="title">Race <span>Results</span></h1>
+    <div class="card">
+      <div class="section-title">Leaderboard</div>
+      <div id="mp-results-list"></div>
     </div>
     <div class="row">
-      <button class="btn btn-ghost btn-danger" id="lobby-logout-btn">Log Out</button>
+      <button class="btn-primary" id="mp-results-back-btn">Back to Menu</button>
     </div>
   </main>
 </div>

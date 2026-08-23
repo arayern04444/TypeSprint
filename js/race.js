@@ -1,9 +1,22 @@
 /* =====================================================================
-   Race — the core typing engine. Keydown-driven, index-based comparison
-   against a target passage, "mistake blocks progress" model, live
-   WPM/accuracy/combo. Dispatches a `race:finished` CustomEvent on
-   window with the final run stats and does not assume what happens
-   after that — callers (solo or, later, multiplayer) react to it.
+   Race — the core typing engine, shared by solo and multiplayer.
+
+   Input capture: a hidden, always-focused <input> overlays the race
+   area (see #race-input in index.html/CSS) instead of listening for
+   keydown on a plain div. This is the standard technique real browser
+   typing tests use, because it's the only approach that reliably
+   receives characters from a mobile virtual keyboard, autocorrect
+   insertions, or IME composition — none of which fire clean keydown
+   sequences. On every `input` event we diff the input's value against
+   the target text starting at the last confirmed-correct position: a
+   match advances (identical scoring/combo/sound/particle logic as
+   before); a mismatch is rejected immediately by truncating the
+   input's value back to the confirmed prefix, so a wrong character
+   never lingers — no separate Backspace-to-clear step needed.
+
+   Dispatches a `race:finished` CustomEvent on window with the final
+   run stats (echoing back `mode`) and does not assume what happens
+   after that — callers (solo or multiplayer) react to it.
 ===================================================================== */
 import { AudioEngine } from './audio.js';
 import { Store } from './store.js';
@@ -11,9 +24,14 @@ import { wordsWithIndex } from './passages.js';
 
 const MISTAKE_CAP_PER_CHAR = 5;
 
+function normalizeQuotes(s) {
+  return s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+}
+
 export const Race = (function () {
   let text = '';
   let difficulty = 'easy';
+  let mode = 'solo';
   let spans = [];
   let pos = 0;
   let mistakeCountAtPos = [];
@@ -23,9 +41,11 @@ export const Race = (function () {
   let charSeen = {}, charMissed = {}, wordSeen = {}, wordMissed = {};
   let finished = false;
   let comboLevel = 0;
+  let progressHandler = null;
 
   const el = {
     container: document.getElementById('race-container'),
+    input: document.getElementById('race-input'),
     passage: document.getElementById('passage-text'),
     caret: document.getElementById('caret'),
     particles: document.getElementById('particle-layer'),
@@ -39,6 +59,7 @@ export const Race = (function () {
   function load(passageObj) {
     text = passageObj.text;
     difficulty = passageObj.difficulty;
+    mode = passageObj.mode || 'solo';
     pos = 0; combo = 0; bestCombo = 0; correctChars = 0; totalKeystrokes = 0;
     startTime = null; finished = false; comboLevel = 0;
     mistakeCountAtPos = new Array(text.length).fill(0);
@@ -58,7 +79,9 @@ export const Race = (function () {
     el.progress.style.width = '0%';
     if (tickHandle) clearInterval(tickHandle);
     tickHandle = setInterval(tick, 250);
-    el.container.focus();
+    el.input.disabled = false;
+    el.input.value = '';
+    el.input.focus();
   }
 
   function positionCaret() {
@@ -92,6 +115,7 @@ export const Race = (function () {
     el.combo.textContent = combo;
     el.time.textContent = (mins * 60).toFixed(1) + 's';
     el.progress.style.width = Math.round((pos / text.length) * 100) + '%';
+    if (progressHandler) progressHandler({ pos, textLength: text.length, wpm, accuracy: acc, done: pos >= text.length });
   }
 
   function spawnParticles() {
@@ -154,12 +178,6 @@ export const Race = (function () {
     updateHud();
   }
 
-  function clearIncorrectFlash() {
-    if (pos < spans.length && spans[pos].classList.contains('incorrect')) {
-      spans[pos].classList.remove('incorrect');
-    }
-  }
-
   function finishWordWeakness() {
     const words = wordsWithIndex(text);
     for (const { word, start, end } of words) {
@@ -173,6 +191,7 @@ export const Race = (function () {
   function finish() {
     finished = true;
     clearInterval(tickHandle);
+    el.input.blur();
     const mins = elapsedMinutes();
     const wpm = mins > 0 ? Math.round((correctChars / 5) / mins) : 0;
     const acc = totalKeystrokes > 0 ? Math.round((correctChars / totalKeystrokes) * 1000) / 10 : 100;
@@ -181,34 +200,49 @@ export const Race = (function () {
     AudioEngine.raceComplete();
     const run = {
       date: new Date().toISOString(),
-      wpm, accuracy: acc, bestCombo, difficulty,
+      wpm, accuracy: acc, bestCombo, difficulty, mode,
       durationSec: Math.round(mins * 600) / 10,
       chars: text.length,
     };
     window.dispatchEvent(new CustomEvent('race:finished', { detail: run }));
   }
 
-  function keydown(e) {
+  function handleInputEvent() {
     if (finished) return;
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      clearIncorrectFlash();
+    const value = normalizeQuotes(el.input.value);
+
+    if (value.length < pos) {
+      // Tried to backspace past already-confirmed text — snap back.
+      // Target text is never "undone"; this keeps the race honest.
+      el.input.value = text.slice(0, pos);
       return;
     }
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key.length !== 1) return;
-    e.preventDefault();
-    if (pos >= text.length) return;
+
     if (!startTime) { startTime = performance.now(); AudioEngine.resume(); }
-    if (e.key === text[pos]) handleCorrect(); else handleIncorrect();
+
+    while (pos < value.length && pos < text.length) {
+      if (value[pos] === text[pos]) {
+        handleCorrect();
+        if (finished) return;
+      } else {
+        handleIncorrect();
+        el.input.value = text.slice(0, pos);
+        return;
+      }
+    }
   }
 
   function quit() {
     finished = true;
     if (tickHandle) clearInterval(tickHandle);
+    el.input.blur();
   }
 
-  return { load, keydown, quit, get difficulty() { return difficulty; } };
-})();
+  el.input.addEventListener('input', handleInputEvent);
 
-document.getElementById('race-container').addEventListener('keydown', Race.keydown);
+  return {
+    load, quit,
+    setProgressHandler(fn) { progressHandler = fn; },
+    get difficulty() { return difficulty; },
+  };
+})();

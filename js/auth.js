@@ -1,12 +1,7 @@
 /* =====================================================================
-   Auth — guest (anonymous) sign-in, email+password sign-up/login,
-   upgrading a guest session to a real account, logout, and session
-   state that the rest of the app can subscribe to.
-
-   Passwords are never seen by our own code beyond passing them
-   straight into these supabase.auth.* calls — Supabase hashes and
-   stores them server-side. Session persistence/restoration across
-   reloads is handled entirely by the supabase-js client itself.
+   Auth — guest-only identity. One tap, a nickname, done (no email,
+   no password). Session persistence/restoration across reloads is
+   handled entirely by the supabase-js client itself.
 ===================================================================== */
 import { supabase } from './supabase-client.js';
 
@@ -39,7 +34,7 @@ export const Auth = {
   get session() { return state.session; },
   get profile() { return state.profile; },
   get isSignedIn() { return !!state.session; },
-  get isGuest() { return !!(state.profile && state.profile.is_guest); },
+  get nickname() { return state.profile ? state.profile.nickname : null; },
 
   async init() {
     const { data } = await supabase.auth.getSession();
@@ -54,52 +49,23 @@ export const Auth = {
     });
   },
 
+  // Signs in anonymously if there's no session yet; otherwise just
+  // renames the existing guest profile. Either way, ends with a
+  // session + a profile carrying the requested nickname.
   async playAsGuest(nickname) {
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error) return { error };
-    state.session = data.session;
+    if (!state.session) {
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) return { error };
+      state.session = data.session;
+    }
     const { error: updErr } = await supabase
       .from('profiles')
       .update({ nickname })
-      .eq('id', data.user.id);
+      .eq('id', state.session.user.id);
     if (updErr) return { error: updErr };
     await loadProfile();
     notify();
-    return { data };
-  },
-
-  async signUp(email, password, nickname) {
-    const { data, error } = await supabase.auth.signUp({
-      email, password, options: { data: { nickname } },
-    });
-    if (error) return { error };
-    state.session = data.session;
-    if (state.session) await loadProfile();
-    notify();
-    return { data };
-  },
-
-  async signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error };
-    state.session = data.session;
-    await loadProfile();
-    notify();
-    return { data };
-  },
-
-  // Links an email+password credential onto the CURRENT (anonymous)
-  // session rather than creating a second account — auth.uid() stays
-  // the same, so nothing needs migrating.
-  async upgradeGuest(email, password) {
-    const { data, error } = await supabase.auth.updateUser({ email, password });
-    if (error) return { error };
-    if (state.session) {
-      await supabase.from('profiles').update({ is_guest: false }).eq('id', state.session.user.id);
-      await loadProfile();
-      notify();
-    }
-    return { data };
+    return { data: state.profile };
   },
 
   async signOut() {
