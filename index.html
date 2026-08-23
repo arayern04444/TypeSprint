@@ -99,22 +99,22 @@
   /* ============ LAYOUT ============ */
   #app { min-height: 100vh; display: flex; flex-direction: column; }
   header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    row-gap: .5rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
     background: var(--bg-alt);
   }
   header .logo { font-size: 1.2rem; font-weight: 800; letter-spacing: .5px; }
   header .logo span { color: var(--accent); }
-  header .header-right { display: flex; align-items: center; gap: .75rem; }
+  header .header-right { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
   .badge {
-    display: inline-flex; align-items: center; gap: .35rem;
+    display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; flex-shrink: 0;
     background: var(--card); border: 1px solid var(--border);
     padding: .35rem .7rem; border-radius: 999px; font-size: .85rem; color: var(--fg-dim);
   }
   .badge b { color: var(--accent); font-size: .9rem; }
   .icon-btn {
     background: var(--card); border: 1px solid var(--border); color: var(--fg);
-    width: 2.2rem; height: 2.2rem; border-radius: 50%; display: flex; align-items: center;
+    width: 2.2rem; height: 2.2rem; min-width: 2.2rem; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center;
     justify-content: center; font-size: 1rem; transition: transform .15s, border-color .15s;
   }
   .icon-btn:hover { transform: scale(1.08); border-color: var(--accent); }
@@ -126,6 +126,8 @@
   body[data-screen="results"] #screen-results { display: block; }
   body[data-screen="history"] #screen-history { display: block; }
   body[data-screen="achievements"] #screen-achievements { display: block; }
+  body[data-screen="auth"] #screen-auth { display: block; }
+  body[data-screen="multiplayer-lobby"] #screen-multiplayer-lobby { display: block; }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
@@ -288,6 +290,15 @@
   .back-link { display: inline-block; margin-bottom: 1rem; color: var(--fg-dim); }
   .back-link:hover { color: var(--accent); }
 
+  /* ============ AUTH / MULTIPLAYER ============ */
+  .account-badge { cursor: pointer; border: none; }
+  .text-input {
+    width: 100%; background: var(--bg-alt); border: 1px solid var(--border); color: var(--fg);
+    padding: .65rem .9rem; border-radius: 10px; font-size: .95rem; outline: none; font-family: inherit;
+  }
+  .text-input:focus { border-color: var(--accent); }
+  .form-error { color: var(--incorrect); font-size: .8rem; margin-top: .5rem; min-height: 1em; }
+
   @media (max-width: 640px) {
     .results-hero .wpm-big { font-size: 3.2rem; }
     #race-container { font-size: 1.15rem; line-height: 1.9rem; padding: 1.25rem 1rem; }
@@ -302,6 +313,7 @@
     <div class="logo">Type<span>Sprint</span></div>
     <div class="header-right">
       <div class="badge">Best <b id="header-best-wpm">0</b> WPM</div>
+      <button class="badge account-badge" id="account-badge">👤 Sign In</button>
       <button class="icon-btn" id="sound-toggle" title="Toggle sound">🔊</button>
     </div>
   </header>
@@ -334,6 +346,7 @@
     <div class="row">
       <button class="btn btn-ghost" id="goto-history-btn">📈 History</button>
       <button class="btn btn-ghost" id="goto-achievements-btn">🏆 Achievements</button>
+      <button class="btn btn-ghost" id="goto-multiplayer-btn">🌐 Multiplayer</button>
       <button class="btn btn-ghost btn-danger" id="reset-progress-btn">Reset Progress</button>
     </div>
   </main>
@@ -411,10 +424,88 @@
       <div class="ach-grid" id="themes-grid"></div>
     </div>
   </main>
+
+  <!-- ===================== AUTH ===================== -->
+  <main id="screen-auth">
+    <a class="back-link" id="auth-back-btn">← Back to Menu</a>
+    <h1 class="title">Play <span>Online</span></h1>
+    <p class="subtitle">Sign in to create or join private multiplayer rooms.</p>
+
+    <div id="auth-signed-out">
+      <div class="row" id="auth-tabs">
+        <button class="btn active" data-tab="guest">Guest</button>
+        <button class="btn" data-tab="signup">Sign Up</button>
+        <button class="btn" data-tab="login">Log In</button>
+      </div>
+
+      <div class="card" id="auth-panel-guest">
+        <div class="section-title">Play as Guest</div>
+        <input class="text-input" id="guest-nickname" placeholder="Pick a nickname" maxlength="20">
+        <button class="btn-primary" id="guest-submit-btn" style="margin-top:.8rem;">Continue as Guest ▶</button>
+        <div class="form-error" id="guest-error"></div>
+      </div>
+
+      <div class="card" id="auth-panel-signup" style="display:none;">
+        <div class="section-title">Create Account</div>
+        <input class="text-input" id="signup-nickname" placeholder="Nickname" maxlength="20">
+        <input class="text-input" id="signup-email" type="email" placeholder="Email" style="margin-top:.6rem;">
+        <input class="text-input" id="signup-password" type="password" placeholder="Password (6+ characters)" style="margin-top:.6rem;">
+        <button class="btn-primary" id="signup-submit-btn" style="margin-top:.8rem;">Sign Up ▶</button>
+        <div class="form-error" id="signup-error"></div>
+      </div>
+
+      <div class="card" id="auth-panel-login" style="display:none;">
+        <div class="section-title">Log In</div>
+        <input class="text-input" id="login-email" type="email" placeholder="Email">
+        <input class="text-input" id="login-password" type="password" placeholder="Password" style="margin-top:.6rem;">
+        <button class="btn-primary" id="login-submit-btn" style="margin-top:.8rem;">Log In ▶</button>
+        <div class="form-error" id="login-error"></div>
+      </div>
+    </div>
+
+    <div id="auth-signed-in" style="display:none;">
+      <div class="card">
+        <div class="section-title">Signed in as</div>
+        <div id="auth-account-summary" style="font-size:1.2rem; font-weight:800;"></div>
+      </div>
+
+      <div class="card" id="auth-upgrade-card" style="display:none;">
+        <div class="section-title">Save Your Progress</div>
+        <div class="hint" style="margin-bottom:.8rem;">You're playing as a guest. Add an email + password to keep this identity across devices.</div>
+        <input class="text-input" id="upgrade-email" type="email" placeholder="Email">
+        <input class="text-input" id="upgrade-password" type="password" placeholder="Password (6+ characters)" style="margin-top:.6rem;">
+        <button class="btn-primary" id="upgrade-submit-btn" style="margin-top:.8rem;">Save Account ▶</button>
+        <div class="form-error" id="upgrade-error"></div>
+      </div>
+
+      <div class="row">
+        <button class="btn-primary" id="auth-continue-btn">Continue to Multiplayer ▶</button>
+        <button class="btn btn-ghost btn-danger" id="auth-logout-btn">Log Out</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== MULTIPLAYER LOBBY (stub — rooms land in the next update) ===================== -->
+  <main id="screen-multiplayer-lobby">
+    <a class="back-link" id="lobby-back-btn">← Back to Menu</a>
+    <h1 class="title">Multiplayer <span>Lobby</span></h1>
+    <div class="card">
+      <div class="section-title">Signed in as</div>
+      <div id="lobby-account-summary" style="font-size:1.2rem; font-weight:800; margin-bottom:.6rem;"></div>
+      <div class="hint">Private rooms (create or join by code) are coming in the next update — your account is ready to go.</div>
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost btn-danger" id="lobby-logout-btn">Log Out</button>
+    </div>
+  </main>
 </div>
 
 <div id="toast-layer"></div>
 
+<!-- Supabase client SDK, pinned to a known-good version. Plain (non-module,
+     non-async) script so it runs synchronously and attaches window.supabase
+     before js/app.js (a deferred module script) starts executing. -->
+<script src="https://unpkg.com/@supabase/supabase-js@2.112.3/dist/umd/supabase.js"></script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

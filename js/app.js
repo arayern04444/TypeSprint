@@ -15,6 +15,8 @@ import {
   renderDifficultyPicker, renderThemePicker, renderHeaderBadge, renderSoundToggle,
   renderSparkline, renderHistoryTable, renderAchievementsGrid, renderThemesGrid, showResults,
 } from './screens.js';
+import { Auth } from './auth.js';
+import { initAuthUI, renderAccountBadge, renderAuthScreen, renderLobbyScreen } from './auth-ui.js';
 
 /* ---- Router hooks ---- */
 let countdownHandle = null;
@@ -55,7 +57,10 @@ function onAchievements() {
   renderThemesGrid();
 }
 
-Router.setHooks({ menu: onMenu, countdown: onCountdown, race: onRace, results: null, history: onHistory, achievements: onAchievements });
+Router.setHooks({
+  menu: onMenu, countdown: onCountdown, race: onRace, results: null, history: onHistory,
+  achievements: onAchievements, auth: renderAuthScreen, 'multiplayer-lobby': renderLobbyScreen,
+});
 
 /* ---- race:finished pipeline ---- */
 window.addEventListener('race:finished', (e) => {
@@ -105,10 +110,16 @@ window.addEventListener('resize', () => {
 });
 
 /* ---- Init ---- */
-(function init() {
+(async function init() {
   const s = Store.load();
   Themes.apply(s.settings.theme);
   renderSoundToggle();
   renderHeaderBadge();
+  initAuthUI();
+  renderAccountBadge();
   Router.goTo('menu');
+  // Session restore can take a moment (network round-trip); the UI is
+  // already usable for solo play before this resolves.
+  await Auth.init();
+  renderAccountBadge();
 })();
