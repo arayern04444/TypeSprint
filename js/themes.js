@@ -1,17 +1,20 @@
 /* =====================================================================
-   Themes — CSS custom-property palettes, gated behind achievements.
-   `equip()` only applies + persists; callers re-render the theme
-   picker/gallery themselves after a successful equip (kept here to
-   avoid this module depending on UI-rendering code).
+   Themes — CSS custom-property palettes. "Aurora" is always unlocked;
+   every other theme is won from a chest (see cosmetics.js) rather than
+   gated behind a specific achievement. `equip()` only applies +
+   persists; callers re-render the theme picker/gallery themselves
+   after a successful equip (kept here to avoid this module depending
+   on UI-rendering code).
 ===================================================================== */
 import { Store } from './store.js';
 
 export const THEMES = [
-  { id: 'default', name: 'Aurora', unlockedBy: null },
-  { id: 'neon', name: 'Neon', unlockedBy: 'wpm60' },
-  { id: 'sunset', name: 'Sunset', unlockedBy: 'combo50' },
-  { id: 'matrix', name: 'Matrix', unlockedBy: 'hard_tier_clear' },
-  { id: 'mono', name: 'Noir', unlockedBy: 'ten_races' },
+  { id: 'default', name: 'Aurora' },
+  { id: 'neon', name: 'Neon' },
+  { id: 'sunset', name: 'Sunset' },
+  { id: 'matrix', name: 'Matrix' },
+  { id: 'mono', name: 'Noir' },
+  { id: 'bee', name: 'Bee' },
 ];
 
 export const Themes = {

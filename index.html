@@ -95,6 +95,21 @@
     --border: #2c2c30;
     --glow: 255, 255, 255;
   }
+  :root[data-theme="bee"] {
+    --bg: #14120a;
+    --bg-alt: #1c1808;
+    --card: #221c0a;
+    --fg: #fff6d8;
+    --fg-dim: #c9b45a;
+    --accent: #ffd400;
+    --accent-2: #1a1a1a;
+    --correct: #7cfc00;
+    --incorrect: #ff3b3b;
+    --incorrect-rgb: 255, 59, 59;
+    --caret: #ffd400;
+    --border: #3a3212;
+    --glow: 255, 212, 0;
+  }
 
   /* ============ LAYOUT ============ */
   #app { min-height: 100vh; display: flex; flex-direction: column; }
@@ -129,6 +144,7 @@
   body[data-screen="multiplayer-home"] #screen-multiplayer-home { display: block; }
   body[data-screen="room"] #screen-room { display: block; }
   body[data-screen="race-multiplayer-results"] #screen-race-multiplayer-results { display: block; }
+  body[data-screen="rewards"] #screen-rewards { display: block; }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
@@ -306,6 +322,16 @@
   .text-input:focus { border-color: var(--accent); }
   .form-error { color: var(--incorrect); font-size: .8rem; margin-top: .5rem; min-height: 1em; }
 
+  /* ============ KEYCAP (currency icon) ============ */
+  .key-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.5em; height: 1.5em; border-radius: .3em; flex-shrink: 0;
+    background: linear-gradient(160deg, var(--accent), var(--accent-2));
+    color: #0b0b12; font-weight: 900; font-size: .8em; font-family: 'Consolas', 'SF Mono', monospace;
+    box-shadow: 0 2px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
+    border: 1px solid rgba(0,0,0,.25);
+  }
+
   /* ============ CAR TRACK (multiplayer race) ============ */
   #mp-track { display: none; margin-bottom: 1.25rem; }
   #mp-track.active { display: block; }
@@ -340,6 +366,7 @@
     <div class="logo">Type<span>Sprint</span></div>
     <div class="header-right">
       <div class="badge">Best <b id="header-best-wpm">0</b> WPM</div>
+      <div class="badge"><span class="key-icon">K</span> <b id="header-keys">0</b></div>
       <button class="badge account-badge" id="account-badge">👤 Sign In</button>
       <button class="icon-btn" id="sound-toggle" title="Toggle sound">🔊</button>
     </div>
@@ -373,6 +400,7 @@
     <div class="row">
       <button class="btn btn-ghost" id="goto-history-btn">📈 History</button>
       <button class="btn btn-ghost" id="goto-achievements-btn">🏆 Achievements</button>
+      <button class="btn btn-ghost" id="goto-rewards-btn">🎁 Rewards</button>
       <button class="btn btn-ghost" id="goto-multiplayer-btn">🌐 Multiplayer</button>
       <button class="btn btn-ghost btn-danger" id="reset-progress-btn">Reset Progress</button>
     </div>
@@ -431,6 +459,10 @@
     <a class="back-link" id="history-back-btn">← Back to Menu</a>
     <h1 class="title">Your <span>Progress</span></h1>
     <div class="card">
+      <div class="section-title">Lifetime Stats</div>
+      <div class="stat-grid" id="lifetime-stats-grid"></div>
+    </div>
+    <div class="card">
       <div class="section-title">WPM over time</div>
       <div id="history-sparkline"></div>
     </div>
@@ -443,14 +475,38 @@
   <!-- ===================== ACHIEVEMENTS ===================== -->
   <main id="screen-achievements">
     <a class="back-link" id="achievements-back-btn">← Back to Menu</a>
-    <h1 class="title">Achievements & <span>Themes</span></h1>
+    <h1 class="title">Achievements</h1>
     <div class="card">
       <div class="section-title">Badges</div>
       <div class="ach-grid" id="achievements-grid"></div>
     </div>
+  </main>
+
+  <!-- ===================== REWARDS (chests & cosmetics) ===================== -->
+  <main id="screen-rewards">
+    <a class="back-link" id="rewards-back-btn">← Back to Menu</a>
+    <h1 class="title">Chests & <span>Rewards</span></h1>
+    <p class="subtitle">Earn keys by racing and completing achievements, then open chests for new themes, sounds, and cars.</p>
+
+    <div class="card" style="text-align:center;">
+      <div class="section-title">Your Keys</div>
+      <div id="rewards-keys-balance" style="font-size:2.4rem; font-weight:900; display:flex; align-items:center; justify-content:center; gap:.5rem;"></div>
+      <button class="btn-primary" id="open-chest-btn" style="margin-top:1rem;">Open Chest — <span class="key-icon">K</span> 100</button>
+      <div class="hint" id="chest-hint" style="margin-top:.5rem;"></div>
+      <div id="chest-reveal"></div>
+    </div>
+
     <div class="card">
       <div class="section-title">Themes</div>
-      <div class="ach-grid" id="themes-grid"></div>
+      <div class="ach-grid" id="rewards-themes-grid"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Sound Packs</div>
+      <div class="ach-grid" id="rewards-sounds-grid"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Cars</div>
+      <div class="ach-grid" id="rewards-cars-grid"></div>
     </div>
   </main>
 

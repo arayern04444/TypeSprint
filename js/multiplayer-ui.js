@@ -11,6 +11,11 @@ import { Router } from './router.js';
 import { Race } from './race.js';
 import { pickPassage } from './passages.js';
 import { showToast } from './toast.js';
+import { CARS } from './cosmetics.js';
+
+function carEmoji(carId) {
+  return (CARS.find((c) => c.id === carId) || CARS[0]).emoji;
+}
 
 function el(id) { return document.getElementById(id); }
 
@@ -91,7 +96,7 @@ function buildTrack() {
     lane.className = 'mp-lane';
     lane.dataset.user = uid;
     lane.innerHTML = `<div class="mp-lane-label${uid === myUid ? ' self' : ''}">${escapeHtml(p.nickname)}${uid === myUid ? ' (You)' : ''}</div>
-      <div class="mp-lane-track"><div class="mp-car">🏎️</div></div>`;
+      <div class="mp-lane-track"><div class="mp-car">${carEmoji(p.car)}</div></div>`;
     track.appendChild(lane);
   }
   track.classList.add('active');

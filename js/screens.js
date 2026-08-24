@@ -1,6 +1,6 @@
 /* =====================================================================
-   Screen renderers — menu difficulty/theme pickers, achievements &
-   themes galleries, history table, sparkline SVG, results screen.
+   Screen renderers — menu difficulty/theme pickers, achievements
+   grid, lifetime stats, history table, sparkline SVG, results screen.
    Pure DOM rendering; navigation/event-wiring lives in app.js.
 ===================================================================== */
 import { Store } from './store.js';
@@ -34,7 +34,7 @@ function themeAccentPreview(id) {
   const map = {
     default: '#7c8cff, #ff7ce0', neon: '#00f0ff, #ff00e5',
     sunset: '#ff8a5c, #ff5c9a', matrix: '#39ff5e, #061206',
-    mono: '#ffffff, #6e6e72',
+    mono: '#ffffff, #6e6e72', bee: '#ffd400, #1a1a1a',
   };
   return map[id] || '#7c8cff, #ff7ce0';
 }
@@ -51,19 +51,18 @@ export function renderThemePicker() {
     sw.className = 'theme-swatch' + (!unlocked ? ' locked' : '') + (s.settings.theme === t.id ? ' selected' : '');
     sw.setAttribute('data-theme', t.id);
     sw.style.background = `linear-gradient(135deg, ${themeAccentPreview(t.id)})`;
-    const reqAch = ACHIEVEMENTS.find(a => a.id === t.unlockedBy);
     if (!unlocked) {
       sw.innerHTML = '<span class="lock">🔒</span>';
-      sw.title = reqAch ? `Unlock: ${reqAch.name} — ${reqAch.desc}` : '';
+      sw.title = 'Unlock via a chest — visit Rewards';
       sw.addEventListener('click', () => {
-        showToast('🔒', `${t.name} is locked`, reqAch ? reqAch.desc : 'Keep playing to unlock this theme.', { info: true, silent: true });
+        showToast('🔒', `${t.name} is locked`, 'Earn keys by racing, then open a chest in Rewards to unlock new themes!', { info: true, silent: true });
         sw.classList.remove('shake-el');
         void sw.offsetWidth;
         sw.classList.add('shake-el');
       });
     } else {
       sw.addEventListener('click', () => {
-        if (Themes.equip(t.id)) { renderThemePicker(); renderThemesGrid(); }
+        if (Themes.equip(t.id)) renderThemePicker();
       });
     }
     wrap.appendChild(sw);
@@ -83,22 +82,10 @@ export function renderAchievementsGrid() {
     const unlocked = s.achievements[a.id] && s.achievements[a.id].unlocked;
     const card = document.createElement('div');
     card.className = 'ach-card' + (unlocked ? '' : ' locked');
-    card.innerHTML = `<span class="ic">${a.icon}</span><div><div class="name">${a.name}</div>
+    card.innerHTML = `<span class="ic">${a.icon}</span><div><div class="name">${a.name}
+        <span style="color:var(--accent); font-size:.7rem; font-weight:700;">+${a.keyReward} <span class="key-icon" style="width:1.1em;height:1.1em;font-size:.7em;vertical-align:-2px;">K</span></span>
+      </div>
       <div class="desc">${a.desc}</div>${unlocked ? `<div class="date">Unlocked ${new Date(s.achievements[a.id].date).toLocaleDateString()}</div>` : ''}</div>`;
-    grid.appendChild(card);
-  }
-}
-
-export function renderThemesGrid() {
-  const grid = document.getElementById('themes-grid');
-  grid.innerHTML = '';
-  for (const t of THEMES) {
-    const unlocked = Themes.isUnlocked(t.id);
-    const reqAch = ACHIEVEMENTS.find(a => a.id === t.unlockedBy);
-    const card = document.createElement('div');
-    card.className = 'ach-card' + (unlocked ? '' : ' locked');
-    card.innerHTML = `<span class="ic">🎨</span><div><div class="name">${t.name}</div>
-      <div class="desc">${unlocked ? 'Unlocked — equip it from the Menu.' : 'Unlock: ' + (reqAch ? reqAch.name : '')}</div></div>`;
     grid.appendChild(card);
   }
 }
@@ -115,8 +102,27 @@ export function renderHistoryTable() {
     <tbody>${rows}</tbody></table>`;
 }
 
+export function renderLifetimeStats() {
+  const s = Store.load();
+  const avgWpm = s.totalRaces > 0 ? Math.round(s.stats.wpmTotal / s.totalRaces) : 0;
+  const stats = [
+    { v: s.totalRaces, l: 'Total Races' },
+    { v: s.stats.perfectRaces, l: 'Perfect Races' },
+    { v: avgWpm, l: 'Average WPM' },
+    { v: s.bestWpm, l: 'Best WPM' },
+    { v: s.bestAccuracy + '%', l: 'Best Accuracy' },
+    { v: s.stats.keysEarnedTotal, l: 'Keys Earned' },
+    { v: s.stats.chestsOpened, l: 'Chests Opened' },
+  ];
+  const grid = document.getElementById('lifetime-stats-grid');
+  grid.innerHTML = stats.map((st, i) => `<div class="stat-card" style="animation-delay:${i * 0.05}s">
+    <div class="v">${st.v}</div><div class="l">${st.l}</div></div>`).join('');
+}
+
 export function renderHeaderBadge() {
-  document.getElementById('header-best-wpm').textContent = Store.load().bestWpm;
+  const s = Store.load();
+  document.getElementById('header-best-wpm').textContent = s.bestWpm;
+  document.getElementById('header-keys').textContent = s.keys;
 }
 
 export function renderSoundToggle() {
@@ -146,7 +152,7 @@ export function renderSparkline(container, history) {
     <polyline points="${polyPoints}" />${circles}</svg>`;
 }
 
-export function showResults(run, unlocks) {
+export function showResults(run, unlocks, keysEarned) {
   const s = Store.load();
   document.getElementById('results-wpm').textContent = run.wpm;
   const prevBest = s.bestWpm === run.wpm && s.history.length > 1 ? Math.max(...s.history.slice(0, -1).map(h => h.wpm), 0) : s.bestWpm;
@@ -169,14 +175,13 @@ export function showResults(run, unlocks) {
     { v: run.bestCombo, l: 'Best Combo' },
     { v: run.durationSec + 's', l: 'Duration' },
     { v: run.chars, l: 'Characters' },
+    { v: '+' + (keysEarned || 0), l: 'Keys Earned' },
   ];
   grid.innerHTML = stats.map((st, i) => `<div class="stat-card" style="animation-delay:${i * 0.08}s">
     <div class="v">${st.v}</div><div class="l">${st.l}</div></div>`).join('');
 
   const unlockWrap = document.getElementById('results-unlocks');
-  const chips = [];
-  unlocks.newlyUnlocked.forEach(a => chips.push(`<div class="unlock-chip"><span class="ic">${a.icon}</span>${a.name}</div>`));
-  unlocks.newThemes.forEach(t => chips.push(`<div class="unlock-chip"><span class="ic">🎨</span>${t.name} theme unlocked</div>`));
+  const chips = unlocks.newlyUnlocked.map(a => `<div class="unlock-chip"><span class="ic">${a.icon}</span>${a.name} (+${a.keyReward} keys)</div>`);
   unlockWrap.innerHTML = chips.length
     ? `<div class="section-title">New unlocks</div><div class="unlock-row">${chips.map((c, i) => c.replace('unlock-chip"', `unlock-chip" style="animation-delay:${i * 0.1}s"`)).join('')}</div>`
     : '';

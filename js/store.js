@@ -7,10 +7,13 @@
 const STORAGE_KEY = 'typingGame.v1';
 const HISTORY_CAP = 100;
 
+const PERFECT_RACE_KEYS = 10;
+const MISTAKE_RACE_KEYS = 5;
+
 function defaultState() {
   return {
     version: 1,
-    settings: { theme: 'default', difficulty: 'easy', soundOn: true },
+    settings: { theme: 'default', difficulty: 'easy', soundOn: true, soundPack: 'default', car: 'default' },
     bestWpm: 0,
     bestAccuracy: 0,
     totalRaces: 0,
@@ -19,7 +22,11 @@ function defaultState() {
     weakWords: {},
     achievements: {},
     unlockedThemes: ['default'],
+    unlockedSoundPacks: ['default'],
+    unlockedCars: ['default'],
     streakDays: { count: 0, lastPlayedDate: null },
+    keys: 0,
+    stats: { perfectRaces: 0, wpmTotal: 0, keysEarnedTotal: 0, chestsOpened: 0 },
   };
 }
 
@@ -32,6 +39,12 @@ export const Store = (function () {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       mem = raw ? Object.assign(defaultState(), JSON.parse(raw)) : defaultState();
+      // Object.assign only merges top-level keys — an older save's nested
+      // `settings`/`stats` object would otherwise wholesale-replace the
+      // fresh defaults and silently drop newly-added sub-fields (e.g. a
+      // save from before soundPack/car existed).
+      mem.settings = Object.assign(defaultState().settings, mem.settings || {});
+      mem.stats = Object.assign(defaultState().stats, mem.stats || {});
     } catch (e) {
       if (!persistWarned) { console.warn('TypeSprint: localStorage unavailable, progress will not be saved.'); persistWarned = true; }
       mem = defaultState();
@@ -79,6 +92,11 @@ export const Store = (function () {
     }
   }
 
+  function addKeys(amount) {
+    mem.keys += amount;
+    mem.stats.keysEarnedTotal += amount;
+  }
+
   function recordRun(run) {
     bumpStreak();
     mem.totalRaces += 1;
@@ -86,8 +104,14 @@ export const Store = (function () {
     mem.bestAccuracy = Math.max(mem.bestAccuracy, run.accuracy);
     mem.history.push(run);
     if (mem.history.length > HISTORY_CAP) mem.history.shift();
+    mem.stats.wpmTotal += run.wpm;
+    const isPerfect = run.accuracy >= 100;
+    if (isPerfect) mem.stats.perfectRaces += 1;
+    const keysEarned = isPerfect ? PERFECT_RACE_KEYS : MISTAKE_RACE_KEYS;
+    addKeys(keysEarned);
     save();
+    return { keysEarned, isPerfect };
   }
 
-  return { load, save, reset, recordRun, updateWeakness };
+  return { load, save, reset, recordRun, updateWeakness, addKeys };
 })();

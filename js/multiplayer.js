@@ -6,6 +6,7 @@
 ===================================================================== */
 import { supabase } from './supabase-client.js';
 import { Auth } from './auth.js';
+import { Store } from './store.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I/L — avoids ambiguous codes
 
@@ -38,8 +39,12 @@ const listeners = { players: new Set(), roomStatus: new Set(), progress: new Set
 function emit(kind, ...args) { listeners[kind].forEach((fn) => fn(...args)); }
 
 function upsertPlayer(userId, patch) {
-  const cur = state.players.get(userId) || { nickname: '?', ready: false, pos: 0, wpm: 0, accuracy: 100, done: false };
+  const cur = state.players.get(userId) || { nickname: '?', ready: false, car: 'default', pos: 0, wpm: 0, accuracy: 100, done: false };
   state.players.set(userId, Object.assign(cur, patch));
+}
+
+function myPresenceMeta(ready) {
+  return { nickname: Auth.nickname, ready, car: (Store.load().settings.car || 'default') };
 }
 
 function subscribeChannel(roomId) {
@@ -52,7 +57,7 @@ function subscribeChannel(roomId) {
     for (const key in presenceState) {
       const meta = presenceState[key][0] || {};
       seen.add(key);
-      upsertPlayer(key, { nickname: meta.nickname, ready: !!meta.ready });
+      upsertPlayer(key, { nickname: meta.nickname, ready: !!meta.ready, car: meta.car || 'default' });
     }
     for (const uid of Array.from(state.players.keys())) {
       if (!seen.has(uid)) state.players.delete(uid);
@@ -85,7 +90,7 @@ function subscribeChannel(roomId) {
 
   channel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
-      await channel.track({ nickname: Auth.nickname, ready: false });
+      await channel.track(myPresenceMeta(false));
     }
   });
 
@@ -158,7 +163,7 @@ export const Multiplayer = {
     if (!state.channel || !state.room) return;
     const userId = Auth.session.user.id;
     await supabase.from('room_players').update({ is_ready: ready }).eq('room_id', state.room.id).eq('user_id', userId);
-    await state.channel.track({ nickname: Auth.nickname, ready });
+    await state.channel.track(myPresenceMeta(ready));
   },
 
   async startRace() {

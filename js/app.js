@@ -13,8 +13,10 @@ import { AchievementsEngine } from './achievements.js';
 import { Router } from './router.js';
 import {
   renderDifficultyPicker, renderThemePicker, renderHeaderBadge, renderSoundToggle,
-  renderSparkline, renderHistoryTable, renderAchievementsGrid, renderThemesGrid, showResults,
+  renderSparkline, renderHistoryTable, renderLifetimeStats, renderAchievementsGrid, showResults,
 } from './screens.js';
+import { initRewardsUI, renderRewardsScreen } from './rewards-ui.js';
+import { showToast } from './toast.js';
 import { Auth } from './auth.js';
 import { Multiplayer } from './multiplayer.js';
 import {
@@ -94,34 +96,36 @@ function onRace() {
 function onHistory() {
   renderSparkline(document.getElementById('history-sparkline'), Store.load().history);
   renderHistoryTable();
+  renderLifetimeStats();
 }
 
 function onAchievements() {
   renderAchievementsGrid();
-  renderThemesGrid();
 }
 
 Router.setHooks({
   menu: onMenu, countdown: onCountdown, race: onRace, results: null, history: onHistory,
-  achievements: onAchievements, 'multiplayer-home': renderMultiplayerHome, room: renderRoomScreen,
-  'race-multiplayer-results': renderMultiplayerResultsScreen,
+  achievements: onAchievements, rewards: renderRewardsScreen, 'multiplayer-home': renderMultiplayerHome,
+  room: renderRoomScreen, 'race-multiplayer-results': renderMultiplayerResultsScreen,
 });
 
 /* ---- race:finished pipeline ---- */
 window.addEventListener('race:finished', async (e) => {
   const run = e.detail;
   // Local stats/achievements/history apply to every race, solo or multiplayer.
-  Store.recordRun(run);
+  const { keysEarned, isPerfect } = Store.recordRun(run);
   adjustAutoTier(run);
   Store.save();
   const unlocks = AchievementsEngine.evaluate(run);
+  showToast('🔑', `+${keysEarned} Keys`, isPerfect ? 'Flawless run bonus!' : 'Race complete', { silent: true });
+  renderHeaderBadge();
 
   if (run.mode === 'multiplayer') {
     await Multiplayer.submitResult(run);
     Router.goTo('race-multiplayer-results');
   } else {
     Router.goTo('results');
-    showResults(run, unlocks);
+    showResults(run, unlocks, keysEarned);
   }
 });
 
@@ -146,7 +150,7 @@ document.getElementById('race-quit-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('reset-progress-btn').addEventListener('click', () => {
-  if (confirm('Reset all progress? This clears your history, achievements, and unlocked themes. This cannot be undone.')) {
+  if (confirm('Reset all progress? This clears your history, achievements, keys, and unlocked themes/sounds/cars. This cannot be undone.')) {
     Store.reset();
     Themes.apply('default');
     Router.goTo('menu');
@@ -182,6 +186,7 @@ window.addEventListener('resize', () => {
   renderSoundToggle();
   renderHeaderBadge();
   initMultiplayerUI();
+  initRewardsUI();
   Router.goTo('menu');
   // Session restore can take a moment (network round-trip); the UI is
   // already usable for solo play before this resolves.
