@@ -1,7 +1,7 @@
 /* =====================================================================
    Rewards UI — the `rewards` screen: keys balance, chest opening +
-   reveal, and the three equippable cosmetic galleries (themes, sound
-   packs, cars).
+   a shake-then-burst-open reveal animation, and the three equippable
+   cosmetic galleries (themes, sound packs, cars).
 ===================================================================== */
 import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
@@ -10,11 +10,18 @@ import { AudioEngine } from './audio.js';
 import { showToast } from './toast.js';
 import { Router } from './router.js';
 import { renderHeaderBadge } from './screens.js';
+import { icon } from './icons.js';
 
 function el(id) { return document.getElementById(id); }
+function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+const CATEGORY_FALLBACK_ICON = { theme: 'palette', soundPack: 'speaker', car: 'racer' };
+function itemIcon(category, item) {
+  return item.emoji || icon(CATEGORY_FALLBACK_ICON[category] || 'star');
 }
 
 function renderGallery(containerId, category, list, equip, isEquipped) {
@@ -26,7 +33,7 @@ function renderGallery(containerId, category, list, equip, isEquipped) {
     const card = document.createElement('div');
     card.className = 'ach-card' + (unlocked ? '' : ' locked');
     if (unlocked) card.style.cursor = 'pointer';
-    card.innerHTML = `<span class="ic">${item.emoji || '🎨'}</span><div><div class="name">${escapeHtml(item.name)}${equipped ? ' ✓' : ''}</div>
+    card.innerHTML = `<span class="ic">${itemIcon(category, item)}</span><div><div class="name">${escapeHtml(item.name)}${equipped ? ' ' + icon('check') : ''}</div>
       <div class="desc">${unlocked ? (equipped ? 'Equipped' : 'Tap to equip') : 'Locked — open a chest'}</div></div>`;
     if (unlocked) card.addEventListener('click', () => { equip(item.id); renderAll(); });
     grid.appendChild(card);
@@ -71,7 +78,66 @@ const CATEGORY_LABEL = { theme: 'Theme', soundPack: 'Sound Pack', car: 'Car' };
 
 export function renderRewardsScreen() {
   renderAll();
-  el('chest-reveal').innerHTML = '';
+}
+
+/* ---- Chest opening animation: appear -> shake -> burst -> reveal ---- */
+function spawnChestParticles() {
+  const scene = el('chest-scene');
+  const n = 20;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('span');
+    s.className = 'spark';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 40 + Math.random() * 55;
+    s.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    s.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    s.style.left = '50%';
+    s.style.top = '48%';
+    s.style.background = i % 2 ? 'var(--accent)' : 'var(--accent-2)';
+    scene.appendChild(s);
+    s.addEventListener('animationend', () => s.remove());
+  }
+}
+
+async function playChestAnimation(result) {
+  const overlay = el('chest-overlay');
+  const svg = el('chest-svg');
+  const flash = el('chest-flash');
+  const prize = el('chest-prize');
+  const continueBtn = el('chest-continue-btn');
+
+  svg.classList.remove('shaking', 'burst');
+  flash.classList.remove('flash');
+  prize.classList.remove('revealed');
+  continueBtn.style.display = 'none';
+  overlay.classList.add('active');
+
+  await wait(50);
+  svg.classList.add('shaking');
+  for (let i = 0; i < 5; i++) setTimeout(() => AudioEngine.countdownTick(), i * 150);
+  await wait(900);
+
+  svg.classList.remove('shaking');
+  svg.classList.add('burst');
+  void flash.offsetWidth;
+  flash.classList.add('flash');
+  spawnChestParticles();
+  AudioEngine.chest();
+  await wait(450);
+
+  if (result.consolation) {
+    el('chest-prize-icon').innerHTML = icon('gift');
+    el('chest-prize-name').textContent = `+${result.consolation} Bonus Keys`;
+    el('chest-prize-category').textContent = 'Everything unlocked!';
+  } else {
+    const { category, item } = result.won;
+    el('chest-prize-icon').innerHTML = itemIcon(category, item);
+    el('chest-prize-name').textContent = item.name;
+    el('chest-prize-category').textContent = CATEGORY_LABEL[category] || '';
+  }
+  prize.classList.add('revealed');
+  continueBtn.style.display = 'inline-flex';
+  renderAll();
 }
 
 export function initRewardsUI() {
@@ -81,16 +147,13 @@ export function initRewardsUI() {
   el('open-chest-btn').addEventListener('click', () => {
     const result = Cosmetics.openChest();
     if (result.error) {
-      showToast('🔒', 'Not enough keys', result.error, { info: true, silent: true });
+      showToast(icon('lock'), 'Not enough keys', result.error, { info: true, silent: true });
       return;
     }
-    AudioEngine.chest();
-    if (result.consolation) {
-      showToast('🎁', 'Chest opened!', `Everything's already unlocked — here's ${result.consolation} bonus keys!`, { silent: true });
-    } else {
-      const { category, item } = result.won;
-      showToast(item.emoji || '🎨', (CATEGORY_LABEL[category] || 'Item') + ' unlocked!', item.name, { silent: true });
-    }
-    renderAll();
+    playChestAnimation(result);
+  });
+
+  el('chest-continue-btn').addEventListener('click', () => {
+    el('chest-overlay').classList.remove('active');
   });
 }

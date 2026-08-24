@@ -6,22 +6,23 @@
 ===================================================================== */
 import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
+import { icon } from './icons.js';
 
 const CHEST_COST = 100;
 const CONSOLATION_KEYS = 20;
 
 export const SOUND_PACKS = [
-  { id: 'default', name: 'Default', emoji: '🔊' },
-  { id: 'arcade', name: 'Arcade', emoji: '🕹️' },
-  { id: 'mechanical', name: 'Mechanical', emoji: '⌨️' },
+  { id: 'default', name: 'Default', emoji: icon('speaker') },
+  { id: 'arcade', name: 'Arcade', emoji: icon('gamepad') },
+  { id: 'mechanical', name: 'Mechanical', emoji: icon('keyGrid') },
 ];
 
 export const CARS = [
-  { id: 'default', name: 'Racer', emoji: '🏎️' },
-  { id: 'sedan', name: 'Sedan', emoji: '🚗' },
-  { id: 'moto', name: 'Motorcycle', emoji: '🏍️' },
-  { id: 'rocket', name: 'Rocket', emoji: '🚀' },
-  { id: 'bee', name: 'Bumble', emoji: '🐝' },
+  { id: 'default', name: 'Racer', emoji: icon('racer') },
+  { id: 'sedan', name: 'Sedan', emoji: icon('sedan') },
+  { id: 'moto', name: 'Motorcycle', emoji: icon('moto') },
+  { id: 'rocket', name: 'Rocket', emoji: icon('rocket') },
+  { id: 'bee', name: 'Bumble', emoji: icon('hexStripes') },
 ];
 
 const CATEGORIES = {

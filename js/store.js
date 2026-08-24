@@ -10,6 +10,29 @@ const HISTORY_CAP = 100;
 const PERFECT_RACE_KEYS = 10;
 const MISTAKE_RACE_KEYS = 5;
 
+function isPlainObject(v) {
+  return v !== null && typeof v === 'object' && !Array.isArray(v);
+}
+
+// Recursively fills in any field missing from `loaded` using `defaults`,
+// at any nesting depth — not just the top level. This is what actually
+// guarantees a save survives every future update: adding a new field
+// anywhere in defaultState() (however deeply nested) is automatically
+// safe for existing saves with zero migration code required per field.
+// Arrays and primitives in `loaded` always win over the default; only
+// plain objects get merged instead of replaced wholesale.
+function mergeDefaults(defaults, loaded) {
+  const result = Object.assign({}, defaults);
+  for (const key in loaded) {
+    const loadedVal = loaded[key];
+    const defaultVal = defaults[key];
+    result[key] = (isPlainObject(loadedVal) && isPlainObject(defaultVal))
+      ? mergeDefaults(defaultVal, loadedVal)
+      : loadedVal;
+  }
+  return result;
+}
+
 function defaultState() {
   return {
     version: 1,
@@ -38,13 +61,7 @@ export const Store = (function () {
     if (mem) return mem;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      mem = raw ? Object.assign(defaultState(), JSON.parse(raw)) : defaultState();
-      // Object.assign only merges top-level keys — an older save's nested
-      // `settings`/`stats` object would otherwise wholesale-replace the
-      // fresh defaults and silently drop newly-added sub-fields (e.g. a
-      // save from before soundPack/car existed).
-      mem.settings = Object.assign(defaultState().settings, mem.settings || {});
-      mem.stats = Object.assign(defaultState().stats, mem.stats || {});
+      mem = raw ? mergeDefaults(defaultState(), JSON.parse(raw)) : defaultState();
     } catch (e) {
       if (!persistWarned) { console.warn('TypeSprint: localStorage unavailable, progress will not be saved.'); persistWarned = true; }
       mem = defaultState();

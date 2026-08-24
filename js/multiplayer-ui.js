@@ -12,6 +12,7 @@ import { Race } from './race.js';
 import { pickPassage } from './passages.js';
 import { showToast } from './toast.js';
 import { CARS } from './cosmetics.js';
+import { icon } from './icons.js';
 
 function carEmoji(carId) {
   return (CARS.find((c) => c.id === carId) || CARS[0]).emoji;
@@ -68,8 +69,8 @@ function renderPlayerList() {
   const rows = [];
   for (const [uid, p] of Multiplayer.players) {
     rows.push(`<div class="row" style="justify-content:space-between; align-items:center; padding:.5rem 0; border-bottom:1px solid var(--border);">
-      <span>${uid === hostId ? '👑 ' : ''}${escapeHtml(p.nickname)}${uid === myUid ? ' (You)' : ''}</span>
-      <span style="color:${p.ready ? 'var(--correct)' : 'var(--fg-dim)'}">${p.ready ? '✓ Ready' : 'Not ready'}</span>
+      <span>${uid === hostId ? icon('crown') + ' ' : ''}${escapeHtml(p.nickname)}${uid === myUid ? ' (You)' : ''}</span>
+      <span style="color:${p.ready ? 'var(--correct)' : 'var(--fg-dim)'}">${p.ready ? icon('check') + ' Ready' : 'Not ready'}</span>
     </div>`);
   }
   wrap.innerHTML = rows.join('') || '<div class="empty-state">Waiting for players…</div>';
@@ -126,12 +127,14 @@ function enterMultiplayerRace() {
 /* ---- results (leaderboard) ---- */
 let resultsRows = [];
 
+const MEDAL_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
+
 function renderResultsRows() {
   const wrap = el('mp-results-list');
   const sorted = resultsRows.slice().sort((a, b) => b.wpm - a.wpm);
   wrap.innerHTML = sorted.length
     ? sorted.map((r, i) => `<div class="row" style="justify-content:space-between; padding:.6rem 0; border-bottom:1px solid var(--border);">
-        <span>${i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : (i + 1) + '. '}${escapeHtml(r.nickname)}</span>
+        <span>${i < 3 ? `<span style="color:${MEDAL_COLORS[i]}">${icon('medal')}</span> ` : (i + 1) + '. '}${escapeHtml(r.nickname)}</span>
         <span>${Math.round(r.wpm)} WPM · ${Math.round(r.accuracy)}%</span>
       </div>`).join('')
     : '<div class="empty-state">Waiting for results…</div>';
@@ -181,9 +184,9 @@ export function initMultiplayerUI() {
     const link = location.origin + location.pathname + '?room=' + room.code;
     try {
       await navigator.clipboard.writeText(link);
-      showToast('🔗', 'Link copied', link, { info: true, silent: true });
+      showToast(icon('link'), 'Link copied', link, { info: true, silent: true });
     } catch (e) {
-      showToast('🔗', 'Room code', room.code, { info: true, silent: true });
+      showToast(icon('link'), 'Room code', room.code, { info: true, silent: true });
     }
   });
 
@@ -193,7 +196,7 @@ export function initMultiplayerUI() {
   el('room-ready-btn').addEventListener('click', () => {
     ready = !ready;
     Multiplayer.setReady(ready);
-    el('room-ready-btn').textContent = ready ? "I'm Ready ✓" : "I'm Ready";
+    el('room-ready-btn').innerHTML = ready ? "I'm Ready " + icon('check') : "I'm Ready";
     el('room-ready-btn').classList.toggle('active', ready);
   });
 

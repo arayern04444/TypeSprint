@@ -323,6 +323,7 @@
   .form-error { color: var(--incorrect); font-size: .8rem; margin-top: .5rem; min-height: 1em; }
 
   /* ============ KEYCAP (currency icon) ============ */
+  .icon { vertical-align: -0.15em; display: inline-block; flex-shrink: 0; }
   .key-icon {
     display: inline-flex; align-items: center; justify-content: center;
     width: 1.5em; height: 1.5em; border-radius: .3em; flex-shrink: 0;
@@ -352,6 +353,52 @@
   }
   .mp-car.finished { filter: drop-shadow(0 0 6px var(--accent)); }
 
+  /* ============ CHEST OPENING OVERLAY ============ */
+  .chest-overlay {
+    position: fixed; inset: 0; background: rgba(4, 4, 8, .8); backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center; flex-direction: column; gap: 1.75rem; z-index: 1000;
+  }
+  .chest-overlay.active { display: flex; }
+  #chest-scene { position: relative; width: 220px; height: 280px; display: flex; align-items: flex-end; justify-content: center; }
+  #chest-svg { position: relative; z-index: 2; overflow: visible; }
+  #chest-svg.shaking { animation: chestShake .12s ease-in-out infinite; }
+  @keyframes chestShake {
+    0%, 100% { transform: rotate(0deg) translateX(0); }
+    25% { transform: rotate(-4deg) translateX(-2px); }
+    75% { transform: rotate(4deg) translateX(2px); }
+  }
+  #chest-lid { transform-box: fill-box; transform-origin: 50% 100%; }
+  #chest-svg.burst #chest-lid { animation: lidPop .55s cubic-bezier(.2, .8, .3, 1) forwards; }
+  @keyframes lidPop {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(-75px) rotate(-30deg); opacity: 0; }
+  }
+  #chest-flash {
+    position: absolute; left: 50%; top: 42%; width: 10px; height: 10px; border-radius: 50%;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+    transform: translate(-50%, -50%) scale(0); opacity: 0; z-index: 1; pointer-events: none;
+  }
+  #chest-flash.flash { animation: chestFlash .6s ease-out forwards; }
+  @keyframes chestFlash {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: .9; }
+    55% { transform: translate(-50%, -50%) scale(9); opacity: .5; }
+    100% { transform: translate(-50%, -50%) scale(12); opacity: 0; }
+  }
+  .chest-prize {
+    position: absolute; bottom: 195px; display: flex; flex-direction: column; align-items: center;
+    gap: .4rem; opacity: 0; pointer-events: none; z-index: 3; text-align: center;
+  }
+  .chest-prize.revealed { animation: prizeReveal .6s cubic-bezier(.34, 1.56, .64, 1) forwards; }
+  @keyframes prizeReveal {
+    0% { transform: translateY(20px) scale(.3); opacity: 0; }
+    70% { transform: translateY(-10px) scale(1.12); opacity: 1; }
+    100% { transform: translateY(-15px) scale(1); opacity: 1; }
+  }
+  #chest-prize-icon { font-size: 3rem; color: var(--accent); filter: drop-shadow(0 0 10px rgba(var(--glow), .6)); }
+  #chest-prize-icon svg { width: 1em; height: 1em; }
+  #chest-prize-name { font-weight: 800; font-size: 1.15rem; }
+  #chest-prize-category { color: var(--fg-dim); font-size: .75rem; text-transform: uppercase; letter-spacing: 1.5px; }
+
   @media (max-width: 640px) {
     .results-hero .wpm-big { font-size: 3.2rem; }
     #race-container { font-size: 1.15rem; line-height: 1.9rem; padding: 1.25rem 1rem; }
@@ -367,8 +414,8 @@
     <div class="header-right">
       <div class="badge">Best <b id="header-best-wpm">0</b> WPM</div>
       <div class="badge"><span class="key-icon">K</span> <b id="header-keys">0</b></div>
-      <button class="badge account-badge" id="account-badge">👤 Sign In</button>
-      <button class="icon-btn" id="sound-toggle" title="Toggle sound">🔊</button>
+      <button class="badge account-badge" id="account-badge"><span data-icon="person"></span> Sign In</button>
+      <button class="icon-btn" id="sound-toggle" title="Toggle sound"><span data-icon="speaker"></span></button>
     </div>
   </header>
 
@@ -398,10 +445,10 @@
     </div>
 
     <div class="row">
-      <button class="btn btn-ghost" id="goto-history-btn">📈 History</button>
-      <button class="btn btn-ghost" id="goto-achievements-btn">🏆 Achievements</button>
-      <button class="btn btn-ghost" id="goto-rewards-btn">🎁 Rewards</button>
-      <button class="btn btn-ghost" id="goto-multiplayer-btn">🌐 Multiplayer</button>
+      <button class="btn btn-ghost" id="goto-history-btn"><span data-icon="chartLine"></span> History</button>
+      <button class="btn btn-ghost" id="goto-achievements-btn"><span data-icon="trophy"></span> Achievements</button>
+      <button class="btn btn-ghost" id="goto-rewards-btn"><span data-icon="gift"></span> Rewards</button>
+      <button class="btn btn-ghost" id="goto-multiplayer-btn"><span data-icon="globe"></span> Multiplayer</button>
       <button class="btn btn-ghost btn-danger" id="reset-progress-btn">Reset Progress</button>
     </div>
   </main>
@@ -575,6 +622,29 @@
 </div>
 
 <div id="toast-layer"></div>
+
+<!-- ===================== CHEST OPENING OVERLAY ===================== -->
+<div id="chest-overlay" class="chest-overlay">
+  <div id="chest-scene">
+    <div id="chest-flash"></div>
+    <svg id="chest-svg" viewBox="0 0 140 120" width="180" height="154">
+      <rect x="10" y="55" width="120" height="55" rx="10" fill="var(--card)" stroke="var(--border)" stroke-width="3"/>
+      <rect x="10" y="72" width="120" height="7" fill="var(--border)"/>
+      <rect x="18" y="92" width="9" height="9" rx="2" fill="var(--accent-2)"/>
+      <rect x="113" y="92" width="9" height="9" rx="2" fill="var(--accent-2)"/>
+      <g id="chest-lid">
+        <path d="M10 55 Q10 18 70 18 Q130 18 130 55 Z" fill="var(--accent)" stroke="var(--border)" stroke-width="3"/>
+        <rect x="59" y="44" width="22" height="15" rx="3" fill="var(--card)" stroke="var(--border)" stroke-width="2"/>
+      </g>
+    </svg>
+    <div id="chest-prize" class="chest-prize">
+      <div id="chest-prize-icon"></div>
+      <div id="chest-prize-name"></div>
+      <div id="chest-prize-category"></div>
+    </div>
+  </div>
+  <button id="chest-continue-btn" class="btn-primary" style="display:none;">Continue</button>
+</div>
 
 <!-- Supabase client SDK, pinned to a known-good version. Plain (non-module,
      non-async) script so it runs synchronously and attaches window.supabase

@@ -8,6 +8,7 @@ import { Store } from './store.js';
 import { AudioEngine } from './audio.js';
 import { Race } from './race.js';
 import { Themes } from './themes.js';
+import { icon } from './icons.js';
 import { pickPassage, adjustAutoTier } from './passages.js';
 import { AchievementsEngine } from './achievements.js';
 import { Router } from './router.js';
@@ -23,6 +24,16 @@ import {
   initMultiplayerUI, renderMultiplayerHome, renderRoomScreen, renderMultiplayerResultsScreen,
   enterMultiplayerRace, applyPendingRoomCodeFromUrl,
 } from './multiplayer-ui.js';
+
+const KEY_TOAST_ICON = '<span class="key-icon" style="width:1.4em;height:1.4em;">K</span>';
+
+function accountBadgeLabel() {
+  return Auth.isSignedIn && Auth.nickname ? Auth.nickname : 'Play Online';
+}
+
+function renderAccountBadge() {
+  document.getElementById('account-badge').innerHTML = icon('person') + ' ' + accountBadgeLabel();
+}
 
 /* ---- Router hooks ---- */
 let countdownHandle = null;
@@ -117,7 +128,7 @@ window.addEventListener('race:finished', async (e) => {
   adjustAutoTier(run);
   Store.save();
   const unlocks = AchievementsEngine.evaluate(run);
-  showToast('🔑', `+${keysEarned} Keys`, isPerfect ? 'Flawless run bonus!' : 'Race complete', { silent: true });
+  showToast(KEY_TOAST_ICON, `+${keysEarned} Keys`, isPerfect ? 'Flawless run bonus!' : 'Race complete', { silent: true });
   renderHeaderBadge();
 
   if (run.mode === 'multiplayer') {
@@ -167,9 +178,7 @@ document.getElementById('sound-toggle').addEventListener('click', () => {
 });
 
 document.getElementById('account-badge').addEventListener('click', () => Router.goTo('multiplayer-home'));
-Auth.onChange(() => {
-  document.getElementById('account-badge').textContent = Auth.isSignedIn && Auth.nickname ? '👤 ' + Auth.nickname : '👤 Play Online';
-});
+Auth.onChange(renderAccountBadge);
 
 window.addEventListener('resize', () => {
   if (document.body.dataset.screen === 'race') {
@@ -181,18 +190,21 @@ window.addEventListener('resize', () => {
 
 /* ---- Init ---- */
 (async function init() {
+  // One-time fill for static nav icons (History/Achievements/Rewards/
+  // Multiplayer) — anything whose icon never changes after first paint.
+  document.querySelectorAll('[data-icon]').forEach((el) => { el.innerHTML = icon(el.dataset.icon); });
+
   const s = Store.load();
   Themes.apply(s.settings.theme);
   renderSoundToggle();
   renderHeaderBadge();
+  renderAccountBadge();
   initMultiplayerUI();
   initRewardsUI();
   Router.goTo('menu');
   // Session restore can take a moment (network round-trip); the UI is
   // already usable for solo play before this resolves.
   await Auth.init();
-  if (Auth.isSignedIn && Auth.nickname) {
-    document.getElementById('account-badge').textContent = '👤 ' + Auth.nickname;
-  }
+  renderAccountBadge();
   applyPendingRoomCodeFromUrl();
 })();

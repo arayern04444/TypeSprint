@@ -7,10 +7,11 @@ import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { showToast } from './toast.js';
+import { icon } from './icons.js';
 
 const DIFFICULTIES = [
   { id: 'easy', label: 'Easy' }, { id: 'medium', label: 'Medium' }, { id: 'hard', label: 'Hard' },
-  { id: 'code', label: 'Code' }, { id: 'quotes', label: 'Quotes' }, { id: 'auto', label: 'Auto ✨' },
+  { id: 'code', label: 'Code' }, { id: 'quotes', label: 'Quotes' }, { id: 'auto', label: 'Auto', icon: 'sparkles' },
 ];
 
 export function renderDifficultyPicker() {
@@ -20,7 +21,7 @@ export function renderDifficultyPicker() {
   for (const d of DIFFICULTIES) {
     const btn = document.createElement('button');
     btn.className = 'btn' + (s.settings.difficulty === d.id ? ' active' : '');
-    btn.textContent = d.label;
+    btn.innerHTML = (d.icon ? icon(d.icon) + ' ' : '') + d.label;
     btn.addEventListener('click', () => {
       s.settings.difficulty = d.id;
       Store.save();
@@ -52,10 +53,10 @@ export function renderThemePicker() {
     sw.setAttribute('data-theme', t.id);
     sw.style.background = `linear-gradient(135deg, ${themeAccentPreview(t.id)})`;
     if (!unlocked) {
-      sw.innerHTML = '<span class="lock">🔒</span>';
+      sw.innerHTML = `<span class="lock">${icon('lock')}</span>`;
       sw.title = 'Unlock via a chest — visit Rewards';
       sw.addEventListener('click', () => {
-        showToast('🔒', `${t.name} is locked`, 'Earn keys by racing, then open a chest in Rewards to unlock new themes!', { info: true, silent: true });
+        showToast(icon('lock'), `${t.name} is locked`, 'Earn keys by racing, then open a chest in Rewards to unlock new themes!', { info: true, silent: true });
         sw.classList.remove('shake-el');
         void sw.offsetWidth;
         sw.classList.add('shake-el');
@@ -127,7 +128,7 @@ export function renderHeaderBadge() {
 
 export function renderSoundToggle() {
   const s = Store.load();
-  document.getElementById('sound-toggle').textContent = s.settings.soundOn ? '🔊' : '🔇';
+  document.getElementById('sound-toggle').innerHTML = icon(s.settings.soundOn ? 'speaker' : 'speakerMuted');
 }
 
 export function renderSparkline(container, history) {
