@@ -192,7 +192,13 @@ export function initMultiplayerUI() {
     }
   });
 
-  el('room-start-btn').addEventListener('click', () => Multiplayer.startRace());
+  el('room-start-btn').addEventListener('click', () => {
+    const room = Multiplayer.room;
+    if (!room) return;
+    // Fresh passage every time (round 2+ shouldn't repeat the exact
+    // same text), same difficulty the room was created with.
+    Multiplayer.startRace(pickPassage(room.passage_difficulty));
+  });
 
   let ready = false;
   el('room-ready-btn').addEventListener('click', () => {
@@ -206,6 +212,12 @@ export function initMultiplayerUI() {
     await Multiplayer.leaveRoom();
     Router.goTo('menu');
   });
+
+  // Everyone can head back to the lobby to wait for the next round —
+  // only the host's "Start Race" there actually kicks it off, but if
+  // the host starts before you click this, the countdown/roomStatus
+  // listener below still pulls you in automatically.
+  el('mp-results-play-again-btn').addEventListener('click', () => Router.goTo('room'));
 
   Multiplayer.onPlayersChange(() => {
     if (document.body.dataset.screen === 'room') renderPlayerList();

@@ -77,7 +77,10 @@ function subscribeChannel(roomId) {
 
   channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
     const row = payload.new;
-    if (state.room) { state.room.status = row.status; state.room.race_start_at = row.race_start_at; }
+    // Full row, not just status/race_start_at — a rematch (see startRace)
+    // also changes round and passage_text/passage_difficulty, and every
+    // room member needs those to load the same next passage.
+    if (state.room) Object.assign(state.room, row);
     emit('roomStatus', {
       status: row.status,
       raceStartAt: row.race_start_at ? new Date(row.race_start_at).getTime() : null,
@@ -85,6 +88,9 @@ function subscribeChannel(roomId) {
   });
 
   channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'race_results', filter: `room_id=eq.${roomId}` }, (payload) => {
+    // Ignore results from a round we've already moved past (a straggler
+    // finishing a prior round after everyone else has replayed).
+    if (state.room && payload.new.round !== state.room.round) return;
     emit('results', payload.new);
   });
 
@@ -166,13 +172,20 @@ export const Multiplayer = {
     await state.channel.track(myPresenceMeta(ready));
   },
 
-  async startRace() {
+  // `passageObj` is required for a rematch (round 2+) so the room gets a
+  // fresh passage instead of literally the same text again; the very
+  // first race also passes one (see multiplayer-ui.js) but falls back
+  // to the room's existing passage if omitted.
+  async startRace(passageObj) {
     if (!state.isHost || !state.room) return;
     const raceStartAt = Date.now() + 5000;
-    await supabase.from('rooms')
-      .update({ status: 'countdown', race_start_at: new Date(raceStartAt).toISOString() })
-      .eq('id', state.room.id);
+    const patch = { status: 'countdown', race_start_at: new Date(raceStartAt).toISOString(), round: (state.room.round || 0) + 1 };
+    if (passageObj) { patch.passage_text = passageObj.text; patch.passage_difficulty = passageObj.difficulty; }
+    const { data, error } = await supabase.from('rooms').update(patch).eq('id', state.room.id).select().single();
+    if (error) return { error };
+    state.room = data;
     state.channel.send({ type: 'broadcast', event: 'race_start', payload: { raceStartAt } });
+    return { data };
   },
 
   sendProgress: throttle((patch) => {
@@ -185,7 +198,7 @@ export const Multiplayer = {
     if (!state.room) return { error: { message: 'Not in a room.' } };
     const userId = Auth.session.user.id;
     const { error } = await supabase.from('race_results').insert({
-      room_id: state.room.id, user_id: userId, nickname: Auth.nickname,
+      room_id: state.room.id, user_id: userId, nickname: Auth.nickname, round: state.room.round || 1,
       wpm: run.wpm, accuracy: run.accuracy, best_combo: run.bestCombo,
       duration_sec: run.durationSec, chars: run.chars,
     });
@@ -195,7 +208,9 @@ export const Multiplayer = {
   async fetchResults() {
     if (!state.room) return [];
     const { data } = await supabase
-      .from('race_results').select('*').eq('room_id', state.room.id).order('wpm', { ascending: false });
+      .from('race_results').select('*')
+      .eq('room_id', state.room.id).eq('round', state.room.round || 1)
+      .order('wpm', { ascending: false });
     return data || [];
   },
 };
