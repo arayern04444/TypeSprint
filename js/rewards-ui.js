@@ -10,7 +10,7 @@ import { AudioEngine } from './audio.js';
 import { showToast } from './toast.js';
 import { Router } from './router.js';
 import { renderHeaderBadge } from './screens.js';
-import { icon } from './icons.js';
+import { icon, iconBadge } from './icons.js';
 
 function el(id) { return document.getElementById(id); }
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -20,8 +20,10 @@ function escapeHtml(s) {
 }
 
 const CATEGORY_FALLBACK_ICON = { theme: 'palette', soundPack: 'speaker', car: 'racer' };
-function itemIcon(category, item) {
-  return item.emoji || icon(CATEGORY_FALLBACK_ICON[category] || 'star');
+function itemIcon(category, item, opts) {
+  const name = item.icon || CATEGORY_FALLBACK_ICON[category] || 'star';
+  const colors = item.colors || ['var(--accent)', 'var(--accent-2)'];
+  return iconBadge(name, Object.assign({ bg: `linear-gradient(160deg, ${colors[0]}, ${colors[1]})` }, opts));
 }
 
 function renderGallery(containerId, category, list, equip, isEquipped) {
@@ -33,7 +35,7 @@ function renderGallery(containerId, category, list, equip, isEquipped) {
     const card = document.createElement('div');
     card.className = 'ach-card' + (unlocked ? '' : ' locked');
     if (unlocked) card.style.cursor = 'pointer';
-    card.innerHTML = `<span class="ic">${itemIcon(category, item)}</span><div><div class="name">${escapeHtml(item.name)}${equipped ? ' ' + icon('check') : ''}</div>
+    card.innerHTML = `${itemIcon(category, item)}<div><div class="name">${escapeHtml(item.name)}${equipped ? ' ' + icon('check') : ''}</div>
       <div class="desc">${unlocked ? (equipped ? 'Equipped' : 'Tap to equip') : 'Locked — open a chest'}</div></div>`;
     if (unlocked) card.addEventListener('click', () => { equip(item.id); renderAll(); });
     grid.appendChild(card);
@@ -125,13 +127,14 @@ async function playChestAnimation(result) {
   AudioEngine.chest();
   await wait(450);
 
+  const prizeBox = { box: '5rem', iconSize: '2.5rem' };
   if (result.consolation) {
-    el('chest-prize-icon').innerHTML = icon('gift');
+    el('chest-prize-icon').innerHTML = iconBadge('gift', Object.assign({ bg: 'linear-gradient(160deg, #ffd166, #ff8a5c)' }, prizeBox));
     el('chest-prize-name').textContent = `+${result.consolation} Bonus Keys`;
     el('chest-prize-category').textContent = 'Everything unlocked!';
   } else {
     const { category, item } = result.won;
-    el('chest-prize-icon').innerHTML = itemIcon(category, item);
+    el('chest-prize-icon').innerHTML = itemIcon(category, item, prizeBox);
     el('chest-prize-name').textContent = item.name;
     el('chest-prize-category').textContent = CATEGORY_LABEL[category] || '';
   }

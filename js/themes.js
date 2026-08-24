@@ -8,13 +8,17 @@
 ===================================================================== */
 import { Store } from './store.js';
 
+// Each theme carries its own icon + a two-stop color pair — used to
+// render that theme's swatch/gallery symbol in ITS colors, not
+// whatever theme happens to be currently equipped (currentColor would
+// make every theme's icon look identical to whichever one is active).
 export const THEMES = [
-  { id: 'default', name: 'Aurora' },
-  { id: 'neon', name: 'Neon' },
-  { id: 'sunset', name: 'Sunset' },
-  { id: 'matrix', name: 'Matrix' },
-  { id: 'mono', name: 'Noir' },
-  { id: 'bee', name: 'Bee' },
+  { id: 'default', name: 'Aurora', icon: 'aurora', colors: ['#7c8cff', '#ff7ce0'] },
+  { id: 'neon', name: 'Neon', icon: 'bolt', colors: ['#00f0ff', '#ff00e5'] },
+  { id: 'sunset', name: 'Sunset', icon: 'sunset', colors: ['#ff8a5c', '#ff5c9a'] },
+  { id: 'matrix', name: 'Matrix', icon: 'terminal', colors: ['#39ff5e', '#0a3a12'] },
+  { id: 'mono', name: 'Noir', icon: 'noir', colors: ['#ffffff', '#6e6e72'] },
+  { id: 'bee', name: 'Bee', icon: 'bee', colors: ['#ffd400', '#1a1a1a'] },
 ];
 
 export const Themes = {

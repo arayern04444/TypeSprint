@@ -6,23 +6,29 @@
 ===================================================================== */
 import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
-import { icon } from './icons.js';
 
 const CHEST_COST = 100;
 const CONSOLATION_KEYS = 20;
 
+// Each item carries an icon name + its own two-stop color pair (read by
+// rewards-ui's badge renderer) so every cosmetic gets a distinct,
+// colorful "chip" instead of a flat line-icon in the app's currentColor.
 export const SOUND_PACKS = [
-  { id: 'default', name: 'Default', emoji: icon('speaker') },
-  { id: 'arcade', name: 'Arcade', emoji: icon('gamepad') },
-  { id: 'mechanical', name: 'Mechanical', emoji: icon('keyGrid') },
+  { id: 'default', name: 'Classic', icon: 'speaker', colors: ['#7c8cff', '#ff7ce0'] },
+  { id: 'arcade', name: 'Arcade', icon: 'gamepad', colors: ['#ffcc00', '#ff5e5e'] },
+  { id: 'mechanical', name: 'Mechanical', icon: 'keyGrid', colors: ['#9aa5b1', '#4d5560'] },
+  { id: 'synth', name: 'Synthwave', icon: 'waveform', colors: ['#ff6ec7', '#7b5bff'] },
+  { id: 'chiptune', name: '8-Bit', icon: 'invader', colors: ['#39ff5e', '#00c2ff'] },
+  { id: 'laser', name: 'Sci-Fi', icon: 'laserBeam', colors: ['#ff2d55', '#ff8a00'] },
+  { id: 'zen', name: 'Lo-Fi', icon: 'moonWave', colors: ['#8fd3ff', '#c9a7ff'] },
 ];
 
 export const CARS = [
-  { id: 'default', name: 'Racer', emoji: icon('racer') },
-  { id: 'sedan', name: 'Sedan', emoji: icon('sedan') },
-  { id: 'moto', name: 'Motorcycle', emoji: icon('moto') },
-  { id: 'rocket', name: 'Rocket', emoji: icon('rocket') },
-  { id: 'bee', name: 'Bumble', emoji: icon('hexStripes') },
+  { id: 'default', name: 'Racer', icon: 'racer', colors: ['#7c8cff', '#ff7ce0'] },
+  { id: 'sedan', name: 'Sedan', icon: 'sedan', colors: ['#9aa5b1', '#4d5560'] },
+  { id: 'moto', name: 'Motorcycle', icon: 'moto', colors: ['#ff5a7a', '#ff9a3c'] },
+  { id: 'rocket', name: 'Rocket', icon: 'rocket', colors: ['#ff7c3c', '#ffd166'] },
+  { id: 'bee', name: 'Bumble', icon: 'hexStripes', colors: ['#ffd400', '#1a1a1a'] },
 ];
 
 const CATEGORIES = {

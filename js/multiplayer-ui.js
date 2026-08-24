@@ -15,7 +15,9 @@ import { CARS } from './cosmetics.js';
 import { icon } from './icons.js';
 
 function carEmoji(carId) {
-  return (CARS.find((c) => c.id === carId) || CARS[0]).emoji;
+  const car = CARS.find((c) => c.id === carId) || CARS[0];
+  const color = (car.colors && car.colors[0]) || 'currentColor';
+  return `<span style="color:${color}">${icon(car.icon, { size: '1.4rem' })}</span>`;
 }
 
 function el(id) { return document.getElementById(id); }

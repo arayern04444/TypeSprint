@@ -178,12 +178,17 @@
     position: relative; width: 4.2rem; height: 4.2rem; border-radius: 12px; border: 2px solid var(--border);
     cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center;
     transition: transform .15s, border-color .15s;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -6px 14px rgba(0,0,0,.25);
   }
-  .theme-swatch:hover { transform: translateY(-2px); }
+  .theme-swatch:hover { transform: translateY(-2px) scale(1.04); }
   .theme-swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--glow), .25); }
-  .theme-swatch.locked { opacity: .45; cursor: pointer; }
+  .theme-swatch.locked { opacity: .5; cursor: pointer; }
   .theme-swatch.shake-el { animation: shake .22s ease; }
-  .theme-swatch .lock { position: absolute; font-size: 1.1rem; }
+  .theme-swatch-icon { color: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
+  .theme-swatch-lock {
+    position: absolute; right: .3rem; bottom: .3rem; width: 1.3rem; height: 1.3rem; border-radius: 50%;
+    background: rgba(0,0,0,.55); color: #fff; display: flex; align-items: center; justify-content: center;
+  }
   .theme-swatch-label { font-size: .7rem; text-align: center; color: var(--fg-dim); margin-top: .3rem; }
   .theme-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
   .theme-item { text-align: center; }
@@ -286,7 +291,6 @@
     display: flex; gap: .8rem; align-items: flex-start;
   }
   .ach-card.locked { opacity: .4; }
-  .ach-card .ic { font-size: 1.8rem; }
   .ach-card .name { font-weight: 700; font-size: .95rem; }
   .ach-card .desc { font-size: .8rem; color: var(--fg-dim); margin-top: .2rem; }
   .ach-card .date { font-size: .7rem; color: var(--accent); margin-top: .3rem; }
@@ -321,6 +325,21 @@
   }
   .text-input:focus { border-color: var(--accent); }
   .form-error { color: var(--incorrect); font-size: .8rem; margin-top: .5rem; min-height: 1em; }
+
+  /* ============ ICON BADGES (gamified reward chips) ============ */
+  /* A symbol punched out of a glossy gradient chip, instead of a bare
+     line-icon sitting flat on a card. Used for achievements and every
+     cosmetic (theme/sound/car) gallery item — colors are supplied
+     per-item (see icons.js iconBadge / rewards-ui.js itemIcon). */
+  .icon-badge {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    border-radius: 14px; border: 1px solid rgba(0,0,0,.3);
+    box-shadow: 0 3px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.4), 0 4px 14px rgba(0,0,0,.25);
+  }
+  .icon-badge .icon { filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.4)); }
+  .ach-badge { background: linear-gradient(160deg, #ffb46b, #ff8a5c); }
+  .ach-badge.tier2 { background: linear-gradient(160deg, #ffd700, #ff5cae); }
+  .ach-badge .icon { width: 1.5rem; height: 1.5rem; color: #2b1608; }
 
   /* ============ KEYCAP (currency icon) ============ */
   .icon { vertical-align: -0.15em; display: inline-block; flex-shrink: 0; }
@@ -394,8 +413,7 @@
     70% { transform: translateY(-10px) scale(1.12); opacity: 1; }
     100% { transform: translateY(-15px) scale(1); opacity: 1; }
   }
-  #chest-prize-icon { font-size: 3rem; color: var(--accent); filter: drop-shadow(0 0 10px rgba(var(--glow), .6)); }
-  #chest-prize-icon svg { width: 1em; height: 1em; }
+  #chest-prize-icon { filter: drop-shadow(0 0 14px rgba(var(--glow), .6)); }
   #chest-prize-name { font-weight: 800; font-size: 1.15rem; }
   #chest-prize-category { color: var(--fg-dim); font-size: .75rem; text-transform: uppercase; letter-spacing: 1.5px; }
 

@@ -40,6 +40,17 @@ const PATHS = {
   keyGrid: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
   star: '<path d="M12 3l2.5 6 6.5.5-5 4.3L17.5 20 12 16.5 6.5 20 8 13.8l-5-4.3L9.5 9z"/>',
   palette: '<path d="M12 3a9 8 0 100 16c1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 005-5c0-3-3-5-9-5z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="11" r="1"/>',
+  // Theme-flavor icons (used colored with each theme's own palette, not currentColor)
+  aurora: '<path d="M3 15.5c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M3 10c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/>',
+  sunset: '<circle cx="12" cy="13.5" r="4.2"/><path d="M3 13.5h18"/><path d="M5.5 17h13M8 20h8"/><path d="M12 5.5v2.3M6 8l1.6 1.6M18 8l-1.6 1.6"/>',
+  terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9.5l3 2.7-3 2.7M12.5 15h4.5"/>',
+  noir: '<path d="M12 3v3.2"/><path d="M7.5 8h9l2.5 12H5l2.5-12z"/><circle cx="12" cy="8" r="1.4"/>',
+  bee: '<ellipse cx="12" cy="13.5" rx="5.2" ry="6"/><path d="M6.9 10.3h10.2M6.9 13.5h10.2M6.9 16.7h10.2"/><path d="M9 7.2c-1-1.8-2.8-1.9-3.8-.9M15 7.2c1-1.8 2.8-1.9 3.8-.9"/>',
+  // Sound-pack icons
+  waveform: '<path d="M2 12h2.3l1.4-6.5L9 18l3-13 3 13 1.3-5.5H19"/>',
+  invader: '<rect x="4.5" y="10" width="15" height="7" rx="1.2"/><rect x="7.5" y="6.8" width="9" height="4" rx="1"/><rect x="2" y="14" width="2.5" height="4.5" rx=".5"/><rect x="19.5" y="14" width="2.5" height="4.5" rx=".5"/><circle cx="9" cy="13.3" r="1.1"/><circle cx="15" cy="13.3" r="1.1"/>',
+  laserBeam: '<path d="M4.5 19.5L15.5 8.5"/><path d="M15.5 8.5l4-4"/><path d="M12.5 5.5l1.6 1.6M16.5 9.5L18 11M8 15l1.6 1.6"/><circle cx="18.7" cy="5.3" r="1.3"/>',
+  moonWave: '<path d="M15.5 4.2a7.8 7.8 0 100 15.6 6.8 6.8 0 01-5.8-10.7 6.8 6.8 0 015.8-4.9z"/><path d="M4 19c1.4-.9 2.8-.9 4.2 0s2.8.9 4.2 0"/>',
 };
 
 export function icon(name, opts) {
@@ -47,4 +58,21 @@ export function icon(name, opts) {
   const size = (opts && opts.size) || '1em';
   const extraClass = (opts && opts.className) ? ' ' + opts.className : '';
   return `<svg class="icon${extraClass}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
+
+// A gamified "badge" wrapper: an icon punched out of a glossy gradient
+// chip (matching the keycap treatment used for currency), instead of a
+// bare line-icon sitting flat on a card. `bg` accepts any CSS
+// background value (typically a two-stop gradient — pass a cosmetic
+// item's own `colors` for a themed chip instead of the app's current
+// accent). Used anywhere a symbol needs to read as a "reward", not UI
+// chrome: achievements, cosmetic galleries, chest prize reveal.
+export function iconBadge(name, opts) {
+  const o = opts || {};
+  const box = o.box || '2.75rem';
+  const iconSize = o.iconSize || '1.5rem';
+  const bg = o.bg || 'linear-gradient(160deg, var(--accent), var(--accent-2))';
+  const fg = o.fg || '#fff';
+  const extraClass = o.className ? ' ' + o.className : '';
+  return `<span class="icon-badge${extraClass}" style="width:${box};height:${box};background:${bg};color:${fg};">${icon(name, { size: iconSize })}</span>`;
 }

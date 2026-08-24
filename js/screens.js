@@ -7,7 +7,7 @@ import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { showToast } from './toast.js';
-import { icon } from './icons.js';
+import { icon, iconBadge } from './icons.js';
 
 const DIFFICULTIES = [
   { id: 'easy', label: 'Easy' }, { id: 'medium', label: 'Medium' }, { id: 'hard', label: 'Hard' },
@@ -31,15 +31,6 @@ export function renderDifficultyPicker() {
   }
 }
 
-function themeAccentPreview(id) {
-  const map = {
-    default: '#7c8cff, #ff7ce0', neon: '#00f0ff, #ff00e5',
-    sunset: '#ff8a5c, #ff5c9a', matrix: '#39ff5e, #061206',
-    mono: '#ffffff, #6e6e72', bee: '#ffd400, #1a1a1a',
-  };
-  return map[id] || '#7c8cff, #ff7ce0';
-}
-
 export function renderThemePicker() {
   const s = Store.load();
   const grid = document.getElementById('theme-grid');
@@ -51,9 +42,10 @@ export function renderThemePicker() {
     const sw = document.createElement('div');
     sw.className = 'theme-swatch' + (!unlocked ? ' locked' : '') + (s.settings.theme === t.id ? ' selected' : '');
     sw.setAttribute('data-theme', t.id);
-    sw.style.background = `linear-gradient(135deg, ${themeAccentPreview(t.id)})`;
+    sw.style.background = `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})`;
+    sw.innerHTML = `<span class="theme-swatch-icon">${icon(t.icon, { size: '1.7rem' })}</span>` +
+      (!unlocked ? `<span class="theme-swatch-lock">${icon('lock', { size: '.85rem' })}</span>` : '');
     if (!unlocked) {
-      sw.innerHTML = `<span class="lock">${icon('lock')}</span>`;
       sw.title = 'Unlock via a chest — visit Rewards';
       sw.addEventListener('click', () => {
         showToast(icon('lock'), `${t.name} is locked`, 'Earn keys by racing, then open a chest in Rewards to unlock new themes!', { info: true, silent: true });
@@ -83,7 +75,8 @@ export function renderAchievementsGrid() {
     const unlocked = s.achievements[a.id] && s.achievements[a.id].unlocked;
     const card = document.createElement('div');
     card.className = 'ach-card' + (unlocked ? '' : ' locked');
-    card.innerHTML = `<span class="ic">${a.icon}</span><div><div class="name">${a.name}
+    const tierClass = a.keyReward >= 50 ? ' tier2' : '';
+    card.innerHTML = `<span class="icon-badge ach-badge${tierClass}">${a.icon}</span><div><div class="name">${a.name}
         <span style="color:var(--accent); font-size:.7rem; font-weight:700;">+${a.keyReward} <span class="key-icon" style="width:1.1em;height:1.1em;font-size:.7em;vertical-align:-2px;">K</span></span>
       </div>
       <div class="desc">${a.desc}</div>${unlocked ? `<div class="date">Unlocked ${new Date(s.achievements[a.id].date).toLocaleDateString()}</div>` : ''}</div>`;
