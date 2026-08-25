@@ -10,6 +10,18 @@ const HISTORY_CAP = 100;
 const PERFECT_RACE_KEYS = 10;
 const MISTAKE_RACE_KEYS = 5;
 
+// Harder difficulty and a longer passage both earn more keys. Length
+// is scaled off the run's actual character count rather than a
+// "short/medium/long" id — that way it's correct in multiplayer too,
+// where every racer types the same host-picked passage regardless of
+// who chose its length.
+const DIFFICULTY_KEY_MULT = { easy: 1, medium: 1.2, hard: 1.5, code: 1.5, quotes: 1.3 };
+function lengthKeyMultiplier(chars) {
+  if (chars >= 180) return 2.2;
+  if (chars >= 90) return 1.5;
+  return 1;
+}
+
 function isPlainObject(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
 }
@@ -36,7 +48,7 @@ function mergeDefaults(defaults, loaded) {
 function defaultState() {
   return {
     version: 1,
-    settings: { theme: 'default', difficulty: 'easy', soundOn: true, soundPack: 'default', car: 'default' },
+    settings: { theme: 'default', difficulty: 'easy', length: 'short', soundOn: true, soundPack: 'default', car: 'default' },
     bestWpm: 0,
     bestAccuracy: 0,
     totalRaces: 0,
@@ -124,7 +136,9 @@ export const Store = (function () {
     mem.stats.wpmTotal += run.wpm;
     const isPerfect = run.accuracy >= 100;
     if (isPerfect) mem.stats.perfectRaces += 1;
-    const keysEarned = isPerfect ? PERFECT_RACE_KEYS : MISTAKE_RACE_KEYS;
+    const diffMult = DIFFICULTY_KEY_MULT[run.difficulty] || 1;
+    const lenMult = lengthKeyMultiplier(run.chars || 0);
+    const keysEarned = Math.max(1, Math.round((isPerfect ? PERFECT_RACE_KEYS : MISTAKE_RACE_KEYS) * diffMult * lenMult));
     addKeys(keysEarned);
     save();
     return { keysEarned, isPerfect };

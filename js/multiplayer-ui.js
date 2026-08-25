@@ -9,7 +9,7 @@ import { Auth } from './auth.js';
 import { Multiplayer } from './multiplayer.js';
 import { Router } from './router.js';
 import { Race } from './race.js';
-import { pickPassage } from './passages.js';
+import { pickPassage, LENGTHS } from './passages.js';
 import { showToast } from './toast.js';
 import { CARS, carArt } from './cosmetics.js';
 import { icon } from './icons.js';
@@ -31,6 +31,7 @@ const MP_DIFFICULTIES = [
   { id: 'code', label: 'Code' }, { id: 'quotes', label: 'Quotes' },
 ];
 let selectedTier = 'easy';
+let selectedLength = 'short';
 
 function renderDifficultyRow() {
   const row = el('mph-difficulty-row');
@@ -44,12 +45,26 @@ function renderDifficultyRow() {
   }
 }
 
+function renderLengthRow() {
+  const row = el('mph-length-row');
+  if (!row) return;
+  row.innerHTML = '';
+  for (const l of LENGTHS) {
+    const btn = document.createElement('button');
+    btn.className = 'btn' + (selectedLength === l.id ? ' active' : '');
+    btn.textContent = l.name;
+    btn.addEventListener('click', () => { selectedLength = l.id; renderLengthRow(); });
+    row.appendChild(btn);
+  }
+}
+
 function setError(id, message) { el(id).textContent = message || ''; }
 
 /* ---- multiplayer-home ---- */
 export function renderMultiplayerHome() {
   el('mph-nickname').value = Auth.nickname || '';
   renderDifficultyRow();
+  renderLengthRow();
   setError('mph-create-error', '');
   setError('mph-join-error', '');
 }
@@ -161,7 +176,7 @@ export function initMultiplayerUI() {
     try {
       const nickname = await ensureNickname('mph-create-error');
       if (!nickname) return;
-      const passage = pickPassage(selectedTier);
+      const passage = pickPassage(selectedTier, selectedLength);
       const { error } = await Multiplayer.createRoom(passage);
       if (error) { setError('mph-create-error', error.message); return; }
       Router.goTo('room');
@@ -211,8 +226,8 @@ export function initMultiplayerUI() {
     const room = Multiplayer.room;
     if (!room) return;
     // Fresh passage every time (round 2+ shouldn't repeat the exact
-    // same text), same difficulty the room was created with.
-    Multiplayer.startRace(pickPassage(room.passage_difficulty));
+    // same text), same difficulty + length the room was created with.
+    Multiplayer.startRace(pickPassage(room.passage_difficulty, selectedLength));
   });
 
   let ready = false;

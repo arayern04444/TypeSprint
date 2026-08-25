@@ -6,6 +6,7 @@
 import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
 import { ACHIEVEMENTS } from './achievements.js';
+import { LENGTHS } from './passages.js';
 import { showToast } from './toast.js';
 import { icon, iconBadge } from './icons.js';
 
@@ -26,6 +27,24 @@ export function renderDifficultyPicker() {
       s.settings.difficulty = d.id;
       Store.save();
       renderDifficultyPicker();
+    });
+    row.appendChild(btn);
+  }
+}
+
+export function renderLengthPicker() {
+  const s = Store.load();
+  const row = document.getElementById('length-row');
+  if (!row) return;
+  row.innerHTML = '';
+  for (const l of LENGTHS) {
+    const btn = document.createElement('button');
+    btn.className = 'btn' + (s.settings.length === l.id ? ' active' : '');
+    btn.textContent = l.name;
+    btn.addEventListener('click', () => {
+      s.settings.length = l.id;
+      Store.save();
+      renderLengthPicker();
     });
     row.appendChild(btn);
   }

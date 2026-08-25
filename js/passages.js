@@ -6,6 +6,18 @@ import { Store } from './store.js';
 const AUTO_TIERS = ['easy', 'medium', 'hard'];
 const AUTO_WPM_TARGET = { easy: 20, medium: 40, hard: Infinity };
 
+// A "length" just controls how many bank sentences get stitched
+// together into one passage — no separate content to author per
+// length. Keys reward more for a longer passage, but that's driven by
+// the actual character count at the end (see store.js), not this id
+// directly, so it stays correct even in multiplayer where every racer
+// types the same server-chosen passage regardless of who picked it.
+export const LENGTHS = [
+  { id: 'short', name: 'Short', sentences: 1 },
+  { id: 'medium', name: 'Medium', sentences: 2 },
+  { id: 'long', name: 'Long', sentences: 3 },
+];
+
 export const PASSAGE_BANK = {
   easy: [
     "the quick brown fox jumps over the lazy dog",
@@ -94,21 +106,34 @@ function weaknessScore(text, s) {
   return score;
 }
 
-export function pickPassage(tier) {
+// Weighted-random pick from `candidates` — favors sentences containing
+// characters/words the player is weak on, same heuristic as before,
+// just pulled out so pickPassage can call it once per sentence needed.
+function pickWeighted(candidates, s) {
+  const scored = candidates.map((text) => ({ text, score: weaknessScore(text, s) }))
+    .sort((a, b) => b.score - a.score);
+  if (Math.random() < 0.6 && scored[0].score > 0) {
+    const top = scored.slice(0, Math.min(3, scored.length));
+    return top[Math.floor(Math.random() * top.length)].text;
+  }
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+export function pickPassage(tier, length) {
   const s = Store.load();
   let resolvedTier = tier;
   if (tier === 'auto') resolvedTier = s.settings.autoTier || 'easy';
   const list = PASSAGE_BANK[resolvedTier] || PASSAGE_BANK.easy;
-  const scored = list.map((text) => ({ text, score: weaknessScore(text, s) }))
-    .sort((a, b) => b.score - a.score);
-  let candidate;
-  if (Math.random() < 0.6 && scored[0].score > 0) {
-    const top = scored.slice(0, Math.min(3, scored.length));
-    candidate = top[Math.floor(Math.random() * top.length)].text;
-  } else {
-    candidate = list[Math.floor(Math.random() * list.length)];
+  const lengthMeta = LENGTHS.find((l) => l.id === length) || LENGTHS[0];
+  const count = Math.min(lengthMeta.sentences, list.length);
+  const remaining = list.slice();
+  const parts = [];
+  for (let i = 0; i < count; i++) {
+    const pick = pickWeighted(remaining, s);
+    parts.push(pick);
+    remaining.splice(remaining.indexOf(pick), 1);
   }
-  return { text: candidate, difficulty: resolvedTier };
+  return { text: parts.join(' '), difficulty: resolvedTier, length: lengthMeta.id };
 }
 
 export function adjustAutoTier(run) {

@@ -454,6 +454,12 @@
     </div>
 
     <div class="card">
+      <div class="section-title">Length</div>
+      <div class="row" id="length-row"></div>
+      <div class="hint" style="margin-top:.6rem;">Longer and harder passages earn more keys.</div>
+    </div>
+
+    <div class="card">
       <div class="section-title">Theme</div>
       <div class="theme-grid" id="theme-grid"></div>
     </div>
@@ -462,7 +468,7 @@
       <div class="row" style="justify-content:space-between; align-items:center;">
         <div>
           <div class="section-title" style="margin-bottom:.2rem;">Ready?</div>
-          <div class="hint">Type the passage exactly. Mistakes must be corrected before you can continue.</div>
+          <div class="hint">Type the passage exactly. A wrong letter is marked and costs accuracy, but the race keeps moving.</div>
         </div>
         <button class="btn-primary" id="start-race-btn">Start Race ▶</button>
       </div>
@@ -595,6 +601,7 @@
     <div class="card">
       <div class="section-title">Create Game</div>
       <div class="row" id="mph-difficulty-row"></div>
+      <div class="row" id="mph-length-row" style="margin-top:.6rem;"></div>
       <button class="btn-primary" id="mph-create-btn" style="margin-top:.8rem;">Create Room ▶</button>
       <div class="form-error" id="mph-create-error"></div>
     </div>

@@ -13,7 +13,7 @@ import { pickPassage, adjustAutoTier } from './passages.js';
 import { AchievementsEngine } from './achievements.js';
 import { Router } from './router.js';
 import {
-  renderDifficultyPicker, renderThemePicker, renderHeaderBadge, renderSoundToggle,
+  renderDifficultyPicker, renderLengthPicker, renderThemePicker, renderHeaderBadge, renderSoundToggle,
   renderSparkline, renderHistoryTable, renderLifetimeStats, renderAchievementsGrid, showResults,
 } from './screens.js';
 import { initRewardsUI, renderRewardsScreen } from './rewards-ui.js';
@@ -40,6 +40,7 @@ let countdownHandle = null;
 
 function onMenu() {
   renderDifficultyPicker();
+  renderLengthPicker();
   renderThemePicker();
   renderHeaderBadge();
 }
@@ -100,7 +101,7 @@ function onRace() {
   if (Multiplayer.room) return; // multiplayer entry is driven by enterMultiplayerRace() instead
   document.getElementById('mp-track').classList.remove('active');
   const s = Store.load();
-  const passage = pickPassage(s.settings.difficulty);
+  const passage = pickPassage(s.settings.difficulty, s.settings.length);
   Race.load(passage);
 }
 
