@@ -141,11 +141,17 @@ export const Multiplayer = {
     if (!data || data.length === 0) return { error: { message: "Room not found — check the code, or it may have already started." } };
     const roomMeta = data[0];
     const userId = Auth.session.user.id;
-    const { error: joinErr } = await supabase
-      .from('room_players')
-      .insert({ room_id: roomMeta.id, user_id: userId, nickname: Auth.nickname });
-    if (joinErr) return { error: joinErr };
-    const { data: roomRow, error: roomErr } = await supabase.from('rooms').select('*').eq('id', roomMeta.id).single();
+    // These two don't depend on each other (both only need roomMeta.id),
+    // so run them together instead of one-after-the-other — halves the
+    // network latency of joining.
+    const [{ error: joinErr }, { data: roomRow, error: roomErr }] = await Promise.all([
+      supabase.from('room_players').insert({ room_id: roomMeta.id, user_id: userId, nickname: Auth.nickname }),
+      supabase.from('rooms').select('*').eq('id', roomMeta.id).single(),
+    ]);
+    // 23505 = unique_violation on (room_id, user_id) — we're already a
+    // member (e.g. a double-tap fired this twice while the first join
+    // was still in flight). Treat that as success rather than an error.
+    if (joinErr && joinErr.code !== '23505') return { error: joinErr };
     if (roomErr) return { error: roomErr };
     state.room = roomRow;
     state.isHost = false;

@@ -5,7 +5,7 @@
 ===================================================================== */
 import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
-import { Cosmetics, SOUND_PACKS, CARS } from './cosmetics.js';
+import { Cosmetics, SOUND_PACKS, CARS, carArt } from './cosmetics.js';
 import { AudioEngine } from './audio.js';
 import { showToast } from './toast.js';
 import { Router } from './router.js';
@@ -19,11 +19,20 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-const CATEGORY_FALLBACK_ICON = { theme: 'palette', soundPack: 'speaker', car: 'racer' };
+const CATEGORY_FALLBACK_ICON = { theme: 'palette', soundPack: 'speaker' };
 function itemIcon(category, item, opts) {
+  const o = opts || {};
+  if (category === 'car') {
+    // A real little vehicle illustration reads better on a plain dark
+    // "asphalt" plate than squeezed into the same square gradient chip
+    // used for icon glyphs — and it needs the extra width.
+    const w = o.big ? '6.5rem' : '4.4rem';
+    const h = o.big ? '3.8rem' : '2.6rem';
+    return `<span class="icon-badge car-badge" style="width:${w};height:${h};">${carArt(item.id, item.colors, { width: '84%' })}</span>`;
+  }
   const name = item.icon || CATEGORY_FALLBACK_ICON[category] || 'star';
   const colors = item.colors || ['var(--accent)', 'var(--accent-2)'];
-  return iconBadge(name, Object.assign({ bg: `linear-gradient(160deg, ${colors[0]}, ${colors[1]})` }, opts));
+  return iconBadge(name, Object.assign({ bg: `linear-gradient(160deg, ${colors[0]}, ${colors[1]})` }, o));
 }
 
 function renderGallery(containerId, category, list, equip, isEquipped) {
@@ -127,7 +136,7 @@ async function playChestAnimation(result) {
   AudioEngine.chest();
   await wait(450);
 
-  const prizeBox = { box: '5rem', iconSize: '2.5rem' };
+  const prizeBox = { box: '5rem', iconSize: '2.5rem', big: true };
   if (result.consolation) {
     el('chest-prize-icon').innerHTML = iconBadge('gift', Object.assign({ bg: 'linear-gradient(160deg, #ffd166, #ff8a5c)' }, prizeBox));
     el('chest-prize-name').textContent = `+${result.consolation} Bonus Keys`;

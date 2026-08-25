@@ -8,11 +8,15 @@
    receives characters from a mobile virtual keyboard, autocorrect
    insertions, or IME composition — none of which fire clean keydown
    sequences. On every `input` event we diff the input's value against
-   the target text starting at the last confirmed-correct position: a
-   match advances (identical scoring/combo/sound/particle logic as
-   before); a mismatch is rejected immediately by truncating the
-   input's value back to the confirmed prefix, so a wrong character
-   never lingers — no separate Backspace-to-clear step needed.
+   the target text one character at a time, starting at the current
+   position: every character — right or wrong — advances the race by
+   one, the same way a real typing test works. A mismatch is marked
+   red and costs accuracy/combo, but it's permanent (like a typo you
+   can't take back once it's out) rather than a wall you have to
+   retype the same letter against to get past — that "stuck on the
+   letter you already know you got wrong" moment was confusing new
+   players. Backspacing past a position already visited (right or
+   wrong) is still blocked; the race never lets history un-happen.
 
    Dispatches a `race:finished` CustomEvent on window with the final
    run stats (echoing back `mode`) and does not assume what happens
@@ -21,8 +25,6 @@
 import { AudioEngine } from './audio.js';
 import { Store } from './store.js';
 import { wordsWithIndex } from './passages.js';
-
-const MISTAKE_CAP_PER_CHAR = 5;
 
 function normalizeQuotes(s) {
   return s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
@@ -152,7 +154,6 @@ export const Race = (function () {
     spans[pos].classList.add('correct');
     const ch = text[pos].toLowerCase();
     charSeen[ch] = (charSeen[ch] || 0) + 1;
-    if (mistakeCountAtPos[pos] > 0) charMissed[ch] = (charMissed[ch] || 0) + 1;
     correctChars++; totalKeystrokes++; combo++; bestCombo = Math.max(bestCombo, combo);
     pos++;
     AudioEngine.correct();
@@ -162,11 +163,15 @@ export const Race = (function () {
     if (pos >= text.length) finish();
   }
 
+  // A wrong character now costs accuracy/combo but still moves the
+  // race forward (like handleCorrect) instead of holding the player at
+  // this position until they retype the exact right letter.
   function handleIncorrect() {
-    mistakeCountAtPos[pos] = (mistakeCountAtPos[pos] || 0) + 1;
-    if (mistakeCountAtPos[pos] <= MISTAKE_CAP_PER_CHAR) totalKeystrokes++;
-    spans[pos].classList.remove('incorrect');
-    void spans[pos].offsetWidth;
+    mistakeCountAtPos[pos] = 1;
+    totalKeystrokes++;
+    const ch = text[pos].toLowerCase();
+    charSeen[ch] = (charSeen[ch] || 0) + 1;
+    charMissed[ch] = (charMissed[ch] || 0) + 1;
     spans[pos].classList.add('incorrect');
     combo = 0;
     comboLevel = 0;
@@ -175,7 +180,10 @@ export const Race = (function () {
     el.container.classList.remove('shake');
     void el.container.offsetWidth;
     el.container.classList.add('shake');
+    pos++;
+    positionCaret();
     updateHud();
+    if (pos >= text.length) finish();
   }
 
   function finishWordWeakness() {
@@ -212,8 +220,10 @@ export const Race = (function () {
     const value = normalizeQuotes(el.input.value);
 
     if (value.length < pos) {
-      // Tried to backspace past already-confirmed text — snap back.
-      // Target text is never "undone"; this keeps the race honest.
+      // Tried to backspace past a position already visited — snap
+      // back. Target text is never "undone"; this keeps the race
+      // honest, and a wrong letter is a permanent mistake, not
+      // something to erase and retry.
       el.input.value = text.slice(0, pos);
       return;
     }
@@ -221,14 +231,9 @@ export const Race = (function () {
     if (!startTime) { startTime = performance.now(); AudioEngine.resume(); }
 
     while (pos < value.length && pos < text.length) {
-      if (value[pos] === text[pos]) {
-        handleCorrect();
-        if (finished) return;
-      } else {
-        handleIncorrect();
-        el.input.value = text.slice(0, pos);
-        return;
-      }
+      if (value[pos] === text[pos]) handleCorrect();
+      else handleIncorrect();
+      if (finished) return;
     }
   }
 

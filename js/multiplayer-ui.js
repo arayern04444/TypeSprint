@@ -11,13 +11,12 @@ import { Router } from './router.js';
 import { Race } from './race.js';
 import { pickPassage } from './passages.js';
 import { showToast } from './toast.js';
-import { CARS } from './cosmetics.js';
+import { CARS, carArt } from './cosmetics.js';
 import { icon } from './icons.js';
 
 function carEmoji(carId) {
   const car = CARS.find((c) => c.id === carId) || CARS[0];
-  const color = (car.colors && car.colors[0]) || 'currentColor';
-  return `<span style="color:${color}">${icon(car.icon, { size: '1.4rem' })}</span>`;
+  return carArt(car.id, car.colors, { width: '2.3rem' });
 }
 
 function el(id) { return document.getElementById(id); }
@@ -153,26 +152,42 @@ export function initMultiplayerUI() {
   el('mph-back-btn').addEventListener('click', () => Router.goTo('menu'));
 
   el('mph-create-btn').addEventListener('click', async () => {
+    const btn = el('mph-create-btn');
+    if (btn.disabled) return; // already in flight — ignore an impatient second tap
     setError('mph-create-error', '');
-    const nickname = await ensureNickname('mph-create-error');
-    if (!nickname) return;
-    el('mph-create-btn').disabled = true;
-    const passage = pickPassage(selectedTier);
-    const { error } = await Multiplayer.createRoom(passage);
-    el('mph-create-btn').disabled = false;
-    if (error) { setError('mph-create-error', error.message); return; }
-    Router.goTo('room');
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Creating…';
+    try {
+      const nickname = await ensureNickname('mph-create-error');
+      if (!nickname) return;
+      const passage = pickPassage(selectedTier);
+      const { error } = await Multiplayer.createRoom(passage);
+      if (error) { setError('mph-create-error', error.message); return; }
+      Router.goTo('room');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
   });
 
   el('mph-join-btn').addEventListener('click', async () => {
+    const btn = el('mph-join-btn');
+    if (btn.disabled) return; // already in flight — ignore an impatient second tap
     setError('mph-join-error', '');
-    const nickname = await ensureNickname('mph-join-error');
-    if (!nickname) return;
-    el('mph-join-btn').disabled = true;
-    const { error } = await Multiplayer.joinRoom(el('mph-join-code').value);
-    el('mph-join-btn').disabled = false;
-    if (error) { setError('mph-join-error', error.message); return; }
-    Router.goTo('room');
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Joining…';
+    try {
+      const nickname = await ensureNickname('mph-join-error');
+      if (!nickname) return;
+      const { error } = await Multiplayer.joinRoom(el('mph-join-code').value);
+      if (error) { setError('mph-join-error', error.message); return; }
+      Router.goTo('room');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
   });
 
   el('room-leave-btn').addEventListener('click', async () => {

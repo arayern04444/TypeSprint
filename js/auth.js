@@ -52,18 +52,28 @@ export const Auth = {
   // Signs in anonymously if there's no session yet; otherwise just
   // renames the existing guest profile. Either way, ends with a
   // session + a profile carrying the requested nickname.
+  // Two round-trips shaved off the common case, both aimed at the
+  // "joining a room feels slow" complaint: skip the network entirely
+  // if we already have this exact nickname, and when we do need to
+  // write it, ask Postgres to hand the updated row straight back
+  // instead of writing then doing a separate follow-up read.
   async playAsGuest(nickname) {
+    if (state.session && state.profile && state.profile.nickname === nickname) {
+      return { data: state.profile };
+    }
     if (!state.session) {
       const { data, error } = await supabase.auth.signInAnonymously();
       if (error) return { error };
       state.session = data.session;
     }
-    const { error: updErr } = await supabase
+    const { data, error: updErr } = await supabase
       .from('profiles')
       .update({ nickname })
-      .eq('id', state.session.user.id);
+      .eq('id', state.session.user.id)
+      .select()
+      .single();
     if (updErr) return { error: updErr };
-    await loadProfile();
+    state.profile = data;
     notify();
     return { data: state.profile };
   },
