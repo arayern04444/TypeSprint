@@ -4,6 +4,7 @@
    handled entirely by the supabase-js client itself.
 ===================================================================== */
 import { supabase } from './supabase-client.js';
+import { isNicknameAllowed } from './wordfilter.js';
 
 const state = {
   session: null,
@@ -60,6 +61,14 @@ export const Auth = {
   async playAsGuest(nickname) {
     if (state.session && state.profile && state.profile.nickname === nickname) {
       return { data: state.profile };
+    }
+    // Instant client-side check before touching the network — the SQL
+    // trigger in sql/phase4_public_launch.sql is the real boundary
+    // (this alone can't be trusted; anyone can call the API directly),
+    // but rejecting obvious cases here avoids a round-trip just to get
+    // a raw database error back.
+    if (!isNicknameAllowed(nickname)) {
+      return { error: { message: "That nickname isn't allowed — please pick another." } };
     }
     if (!state.session) {
       const { data, error } = await supabase.auth.signInAnonymously();

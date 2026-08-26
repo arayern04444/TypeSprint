@@ -51,6 +51,7 @@ const PATHS = {
   invader: '<rect x="4.5" y="10" width="15" height="7" rx="1.2"/><rect x="7.5" y="6.8" width="9" height="4" rx="1"/><rect x="2" y="14" width="2.5" height="4.5" rx=".5"/><rect x="19.5" y="14" width="2.5" height="4.5" rx=".5"/><circle cx="9" cy="13.3" r="1.1"/><circle cx="15" cy="13.3" r="1.1"/>',
   laserBeam: '<path d="M4.5 19.5L15.5 8.5"/><path d="M15.5 8.5l4-4"/><path d="M12.5 5.5l1.6 1.6M16.5 9.5L18 11M8 15l1.6 1.6"/><circle cx="18.7" cy="5.3" r="1.3"/>',
   moonWave: '<path d="M15.5 4.2a7.8 7.8 0 100 15.6 6.8 6.8 0 01-5.8-10.7 6.8 6.8 0 015.8-4.9z"/><path d="M4 19c1.4-.9 2.8-.9 4.2 0s2.8.9 4.2 0"/>',
+  share: '<circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 10.7L15.8 7M8.2 13.3L15.8 17"/>',
 };
 
 export function icon(name, opts) {

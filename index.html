@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TypeSprint — Typing Speed Game</title>
+<meta name="description" content="Race the clock and level up your typing speed — a free browser typing game with achievements, unlockable themes, and live multiplayer races against friends.">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TypeSprint">
+<meta property="og:title" content="TypeSprint — Typing Speed Game">
+<meta property="og:description" content="Race the clock, build combos, and unlock rewards as your typing speed grows — or race friends live.">
+<meta property="og:image" content="https://typesprint-sable.vercel.app/og-image.png">
+<meta property="og:url" content="https://typesprint-sable.vercel.app/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TypeSprint — Typing Speed Game">
+<meta name="twitter:description" content="Race the clock, build combos, and unlock rewards as your typing speed grows.">
+<meta name="twitter:image" content="https://typesprint-sable.vercel.app/og-image.png">
 <style>
   /* ============ RESET & BASE ============ */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -479,6 +492,7 @@
       <button class="btn btn-ghost" id="goto-achievements-btn"><span data-icon="trophy"></span> Achievements</button>
       <button class="btn btn-ghost" id="goto-rewards-btn"><span data-icon="gift"></span> Rewards</button>
       <button class="btn btn-ghost" id="goto-multiplayer-btn"><span data-icon="globe"></span> Multiplayer</button>
+      <button class="btn btn-ghost" id="share-btn"><span data-icon="share"></span> Share</button>
       <button class="btn btn-ghost btn-danger" id="reset-progress-btn">Reset Progress</button>
     </div>
   </main>
@@ -526,6 +540,7 @@
     </div>
     <div class="row">
       <button class="btn-primary" id="retry-btn">Race Again ▶</button>
+      <button class="btn btn-ghost" id="results-share-btn"><span data-icon="share"></span> Share</button>
       <button class="btn btn-ghost" id="results-menu-btn">Back to Menu</button>
       <button class="btn btn-ghost" id="results-history-btn">View Full History</button>
     </div>

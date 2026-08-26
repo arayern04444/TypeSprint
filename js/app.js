@@ -27,12 +27,20 @@ import {
 
 const KEY_TOAST_ICON = '<span class="key-icon" style="width:1.4em;height:1.4em;">K</span>';
 
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function accountBadgeLabel() {
   return Auth.isSignedIn && Auth.nickname ? Auth.nickname : 'Play Online';
 }
 
 function renderAccountBadge() {
-  document.getElementById('account-badge').innerHTML = icon('person') + ' ' + accountBadgeLabel();
+  // accountBadgeLabel() is the player's own nickname — the nickname
+  // filter (js/wordfilter.js + the SQL trigger) blocks obvious abuse,
+  // but neither stops someone naming themselves `<img onerror=...>`,
+  // so this still needs escaping before it hits innerHTML.
+  document.getElementById('account-badge').innerHTML = icon('person') + ' ' + escapeHtml(accountBadgeLabel());
 }
 
 /* ---- Router hooks ---- */
@@ -141,10 +149,34 @@ window.addEventListener('race:finished', async (e) => {
   }
 });
 
+// Reuses the exact copy-link-then-toast fallback already proven by
+// multiplayer-ui.js's room-copy-link-btn: native share sheet where
+// available (mainly mobile), otherwise clipboard + toast. A cancelled
+// share sheet isn't a failure, so it's swallowed silently.
+async function shareApp(text) {
+  const url = location.origin + location.pathname;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'TypeSprint', text: text || 'Check out TypeSprint — a typing speed game!', url }); }
+    catch (e) { /* user cancelled — not an error */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast(icon('link'), 'Link copied', url, { info: true, silent: true });
+  } catch (e) {
+    showToast(icon('link'), 'TypeSprint', url, { info: true, silent: true });
+  }
+}
+
 /* ---- Button wiring ---- */
 document.getElementById('start-race-btn').addEventListener('click', () => { AudioEngine.resume(); Router.goTo('countdown'); });
 document.getElementById('retry-btn').addEventListener('click', () => Router.goTo('countdown'));
 document.getElementById('results-menu-btn').addEventListener('click', () => Router.goTo('menu'));
+document.getElementById('share-btn').addEventListener('click', () => shareApp());
+document.getElementById('results-share-btn').addEventListener('click', () => {
+  const wpm = document.getElementById('results-wpm').textContent;
+  shareApp(`I just typed ${wpm} WPM on TypeSprint! Can you beat it?`);
+});
 document.getElementById('results-history-btn').addEventListener('click', () => Router.goTo('history'));
 document.getElementById('goto-history-btn').addEventListener('click', () => Router.goTo('history'));
 document.getElementById('goto-achievements-btn').addEventListener('click', () => Router.goTo('achievements'));
