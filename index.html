@@ -395,8 +395,24 @@
   svg.sparkline circle { fill: var(--accent-2); }
 
   /* This-race pacing graph (results screen) — net WPM, raw WPM, and
-     mistake markers over the course of the just-finished race. */
-  .race-graph-wrap { margin-top: .5rem; }
+     mistake markers over the course of the just-finished race. Axis
+     labels are plain positioned HTML (not SVG text) so they never get
+     stretched/squished by the plot SVG's non-uniform scaling — see the
+     comment on renderRaceGraph() in js/screens.js. */
+  .race-graph-wrap {
+    margin-top: .5rem; display: grid;
+    grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; column-gap: .5rem;
+  }
+  .race-graph-yaxis {
+    grid-column: 1; grid-row: 1; display: flex; flex-direction: column; justify-content: space-between;
+    font-size: .65rem; color: var(--fg-dim); text-align: right; padding: .1rem 0;
+  }
+  .race-graph-plot { grid-column: 2; grid-row: 1; min-width: 0; }
+  .race-graph-xaxis-spacer { grid-column: 1; grid-row: 2; }
+  .race-graph-xaxis { grid-column: 2; grid-row: 2; position: relative; height: 1.1rem; margin-top: .25rem; font-size: .65rem; color: var(--fg-dim); }
+  .race-graph-xaxis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .race-graph-xaxis span.left { transform: translateX(0); }
+  .race-graph-xaxis span.right { transform: translateX(-100%); }
   svg.race-graph { width: 100%; height: 130px; display: block; }
   svg.race-graph polyline { fill: none; stroke-linejoin: round; stroke-linecap: round; }
   svg.race-graph polyline.net { stroke: var(--accent); stroke-width: 2.5; }

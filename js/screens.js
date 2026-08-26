@@ -219,31 +219,69 @@ export function renderSparkline(container, history) {
     <polyline points="${polyPoints}" />${circles}</svg>`;
 }
 
+// Picks a clean, round tick spacing (seconds) for the x-axis given how
+// long the race ran — a 15s test doesn't want the same tick spacing as
+// a 120s one.
+function pickTimeTickStep(totalSec) {
+  if (totalSec <= 20) return 5;
+  if (totalSec <= 45) return 10;
+  if (totalSec <= 90) return 15;
+  return 30;
+}
+
 // The just-finished race's own pacing — one point per second, net WPM
 // and raw WPM, with a marker on any second a mistake happened. Distinct
 // from renderSparkline above (that one tracks WPM across many *past*
 // races, not the internals of a single one) — same hand-rolled inline-
 // SVG technique, no charting library.
+//
+// Axis labels are plain positioned HTML, not SVG text: the plot's own
+// SVG stretches to fill its box (preserveAspectRatio="none", fine for
+// wiggly lines), but text inside a non-uniformly-scaled SVG gets
+// visibly squished/stretched depending on the card's width — HTML text
+// alongside it just reads correctly at any size.
 function renderRaceGraph(container, run) {
   const points = (run.timeline && run.timeline.points) || [];
   if (points.length < 2) { container.innerHTML = ''; return; }
   const errorSeconds = new Set((run.timeline && run.timeline.errorSeconds) || []);
-  const w = 600, h = 120, pad = 10;
-  const maxWpm = Math.max(...points.map((p) => Math.max(p.wpm, p.raw)), 10);
+  const w = 600, h = 120, pad = 6;
+  const rawMax = Math.max(...points.map((p) => Math.max(p.wpm, p.raw)), 10);
+  const yMax = Math.max(10, Math.ceil(rawMax / 10) * 10);
+  const totalSec = points[points.length - 1].t;
   const stepX = (w - pad * 2) / (points.length - 1);
   const xAt = (i) => pad + i * stepX;
-  const yAt = (wpm) => h - pad - (wpm / maxWpm) * (h - pad * 2);
+  const yAt = (wpm) => h - pad - (wpm / yMax) * (h - pad * 2);
   const line = (key) => points.map((p, i) => `${xAt(i)},${yAt(p[key])}`).join(' ');
   const errorDots = points
     .map((p, i) => ({ p, i }))
     .filter(({ p }) => errorSeconds.has(p.t))
     .map(({ p, i }) => `<circle class="err" cx="${xAt(i)}" cy="${yAt(p.wpm)}" r="3.5"><title>Mistake at ${p.t}s</title></circle>`)
     .join('');
-  container.innerHTML = `<svg class="race-graph" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <polyline class="raw" points="${line('raw')}" />
-    <polyline class="net" points="${line('wpm')}" />
-    ${errorDots}
-  </svg>`;
+
+  const tickStep = pickTimeTickStep(totalSec);
+  const xTicks = [];
+  for (let t = 0; t <= totalSec; t += tickStep) xTicks.push(t);
+  if (totalSec - xTicks[xTicks.length - 1] > tickStep * 0.3) xTicks.push(Math.round(totalSec));
+  const xLabels = xTicks.map((t) => {
+    const edge = t === 0 ? 'left' : t === xTicks[xTicks.length - 1] ? 'right' : 'mid';
+    return `<span class="${edge}" style="left:${(t / totalSec) * 100}%">${t}s</span>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="race-graph-yaxis">
+      <span>${yMax}</span>
+      <span>${Math.round(yMax / 2)}</span>
+      <span>0</span>
+    </div>
+    <div class="race-graph-plot">
+      <svg class="race-graph" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <polyline class="raw" points="${line('raw')}" />
+        <polyline class="net" points="${line('wpm')}" />
+        ${errorDots}
+      </svg>
+    </div>
+    <div class="race-graph-xaxis-spacer"></div>
+    <div class="race-graph-xaxis">${xLabels}</div>`;
 }
 
 export function showResults(run, unlocks, keysEarned) {
