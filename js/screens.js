@@ -8,7 +8,7 @@ import { Themes, THEMES } from './themes.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { LENGTHS, TIMED_DURATIONS } from './passages.js';
 import { showToast } from './toast.js';
-import { icon, iconBadge } from './icons.js';
+import { icon, iconBadge, paletteDots } from './icons.js';
 
 const DIFFICULTIES = [
   { id: 'easy', label: 'Easy' }, { id: 'medium', label: 'Medium' }, { id: 'hard', label: 'Hard' },
@@ -129,6 +129,11 @@ export function renderThemePicker() {
     lbl.className = 'theme-swatch-label';
     lbl.textContent = t.name;
     wrap.appendChild(lbl);
+    if (t.palette) {
+      const dotsWrap = document.createElement('div');
+      dotsWrap.innerHTML = paletteDots(t.palette);
+      wrap.appendChild(dotsWrap.firstElementChild);
+    }
     grid.appendChild(wrap);
   }
 }

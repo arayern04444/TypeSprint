@@ -21,6 +21,11 @@ export const SOUND_PACKS = [
   { id: 'chiptune', name: '8-Bit', icon: 'invader', colors: ['#39ff5e', '#00c2ff'] },
   { id: 'laser', name: 'Sci-Fi', icon: 'laserBeam', colors: ['#ff2d55', '#ff8a00'] },
   { id: 'zen', name: 'Lo-Fi', icon: 'moonWave', colors: ['#8fd3ff', '#c9a7ff'] },
+  { id: 'click', name: 'Click', icon: 'cursorClick', colors: ['#c7ccd8', '#5b606f'] },
+  { id: 'pop', name: 'Pop', icon: 'bubble', colors: ['#7ce0ff', '#ff9ad1'] },
+  { id: 'beep', name: 'Beep', icon: 'ping', colors: ['#dfe6ff', '#7c8cff'] },
+  { id: 'typewriter', name: 'Typewriter', icon: 'typewriter', colors: ['#d8c9a3', '#8a6d3b'] },
+  { id: 'marimba', name: 'Marimba', icon: 'xylophone', colors: ['#ffd48a', '#c97b2e'] },
 ];
 
 export const CARS = [

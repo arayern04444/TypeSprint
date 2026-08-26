@@ -52,6 +52,11 @@ const PATHS = {
   laserBeam: '<path d="M4.5 19.5L15.5 8.5"/><path d="M15.5 8.5l4-4"/><path d="M12.5 5.5l1.6 1.6M16.5 9.5L18 11M8 15l1.6 1.6"/><circle cx="18.7" cy="5.3" r="1.3"/>',
   moonWave: '<path d="M15.5 4.2a7.8 7.8 0 100 15.6 6.8 6.8 0 01-5.8-10.7 6.8 6.8 0 015.8-4.9z"/><path d="M4 19c1.4-.9 2.8-.9 4.2 0s2.8.9 4.2 0"/>',
   share: '<circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 10.7L15.8 7M8.2 13.3L15.8 17"/>',
+  cursorClick: '<path d="M6 3l6 15 2.2-6.2L20.5 9.6z"/><path d="M13.5 13.5l5 5"/>',
+  bubble: '<circle cx="12" cy="13" r="7"/><path d="M8.5 9.5c1.2-1.2 3.2-1.2 4.4 0"/>',
+  ping: '<circle cx="12" cy="12" r="3"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/>',
+  typewriter: '<rect x="4" y="12.5" width="16" height="6.5" rx="1.3"/><rect x="6" y="6" width="12" height="7" rx="1"/><path d="M9 19v2M15 19v2M8 9.5h8"/>',
+  xylophone: '<rect x="4" y="10" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="13" rx="1"/><rect x="16" y="9" width="4" height="10" rx="1"/>',
 };
 
 export function icon(name, opts) {
@@ -76,4 +81,15 @@ export function iconBadge(name, opts) {
   const fg = o.fg || '#fff';
   const extraClass = o.className ? ' ' + o.className : '';
   return `<span class="icon-badge${extraClass}" style="width:${box};height:${box};background:${bg};color:${fg};">${icon(name, { size: iconSize })}</span>`;
+}
+
+// A compact row of solid color dots — a theme's actual palette at a
+// glance (background/accent/accent-2/correct-key color), rather than
+// one blended swatch color. Used wherever themes are browsed.
+export function paletteDots(colors, opts) {
+  const o = opts || {};
+  const size = o.size || '.6rem';
+  const dots = (colors || []).map((c) =>
+    `<span class="dot" style="width:${size};height:${size};background:${c};"></span>`).join('');
+  return `<span class="palette-dots${o.className ? ' ' + o.className : ''}">${dots}</span>`;
 }

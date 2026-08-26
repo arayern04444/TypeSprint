@@ -10,7 +10,7 @@ import { AudioEngine } from './audio.js';
 import { showToast } from './toast.js';
 import { Router } from './router.js';
 import { renderHeaderBadge } from './screens.js';
-import { icon, iconBadge } from './icons.js';
+import { icon, iconBadge, paletteDots } from './icons.js';
 
 function el(id) { return document.getElementById(id); }
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -44,8 +44,9 @@ function renderGallery(containerId, category, list, equip, isEquipped) {
     const card = document.createElement('div');
     card.className = 'ach-card' + (unlocked ? '' : ' locked');
     if (unlocked) card.style.cursor = 'pointer';
+    const dots = category === 'theme' && item.palette ? paletteDots(item.palette, { className: 'inline' }) : '';
     card.innerHTML = `${itemIcon(category, item)}<div><div class="name">${escapeHtml(item.name)}${equipped ? ' ' + icon('check') : ''}</div>
-      <div class="desc">${unlocked ? (equipped ? 'Equipped' : 'Tap to equip') : 'Locked — open a chest'}</div></div>`;
+      <div class="desc">${unlocked ? (equipped ? 'Equipped' : 'Tap to equip') : 'Locked — open a chest'}</div>${dots}</div>`;
     if (unlocked) card.addEventListener('click', () => { equip(item.id); renderAll(); });
     grid.appendChild(card);
   }

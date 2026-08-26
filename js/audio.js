@@ -79,6 +79,60 @@ const PACKS = {
     countdownGo: { freq: 440, dur: 0.32, type: 'sine', gain: 0.2 },
     chest: { freqs: [330, 440, 523, 659], dur: 0.2, type: 'sine', gain: 0.16, step: 0.12 },
   },
+  click: {
+    correct: { freq: 3200, dur: 0.012, type: 'square', gain: 0.12 },
+    error: { freq: 140, dur: 0.07, type: 'square', gain: 0.22 },
+    comboMilestone: { freqs: [2400, 2800, 3200], dur: 0.02, type: 'square', gain: 0.16, step: 0.04 },
+    achievement: { freqs: [1800, 2200, 2600, 3200], dur: 0.03, type: 'square', gain: 0.2, step: 0.05 },
+    raceComplete: { freqs: [2000, 2600, 3200], dur: 0.03, type: 'square', gain: 0.2, step: 0.05 },
+    countdownTick: { freq: 1600, dur: 0.02, type: 'square', gain: 0.18 },
+    countdownGo: { freq: 2600, dur: 0.1, type: 'square', gain: 0.26 },
+    chest: { freqs: [1400, 1900, 2400, 3000], dur: 0.03, type: 'square', gain: 0.22, step: 0.04 },
+  },
+  pop: {
+    correct: { freq: 740, dur: 0.06, type: 'triangle', gain: 0.2 },
+    error: { freq: 170, dur: 0.13, type: 'triangle', gain: 0.24 },
+    comboMilestone: { freqs: [523, 659, 880], dur: 0.1, type: 'triangle', gain: 0.22, step: 0.07 },
+    achievement: { freqs: [440, 587, 740, 988], dur: 0.16, type: 'triangle', gain: 0.24, step: 0.09 },
+    raceComplete: { freqs: [659, 880, 1108], dur: 0.16, type: 'triangle', gain: 0.24, step: 0.1 },
+    countdownTick: { freq: 392, dur: 0.09, type: 'triangle', gain: 0.2 },
+    countdownGo: { freq: 587, dur: 0.24, type: 'triangle', gain: 0.28 },
+    chest: { freqs: [392, 523, 659, 880], dur: 0.14, type: 'triangle', gain: 0.24, step: 0.08 },
+  },
+  beep: {
+    correct: { freq: 1000, dur: 0.05, type: 'sine', gain: 0.2 },
+    error: { freq: 220, dur: 0.12, type: 'sine', gain: 0.22 },
+    comboMilestone: { freqs: [700, 900, 1100], dur: 0.09, type: 'sine', gain: 0.2, step: 0.06 },
+    achievement: { freqs: [600, 800, 1000, 1200], dur: 0.15, type: 'sine', gain: 0.22, step: 0.08 },
+    raceComplete: { freqs: [800, 1000, 1200], dur: 0.15, type: 'sine', gain: 0.22, step: 0.09 },
+    countdownTick: { freq: 500, dur: 0.07, type: 'sine', gain: 0.2 },
+    countdownGo: { freq: 900, dur: 0.22, type: 'sine', gain: 0.26 },
+    chest: { freqs: [500, 700, 900, 1100], dur: 0.13, type: 'sine', gain: 0.22, step: 0.07 },
+  },
+  typewriter: {
+    correct: { freq: 480, dur: 0.025, type: 'square', gain: 0.22 },
+    error: { freq: 110, dur: 0.1, type: 'square', gain: 0.28 },
+    // A typewriter's carriage bell — a bright "ding" tacked on the end
+    // of the milestone chimes, distinct from the low mechanical thock
+    // of every keystroke.
+    comboMilestone: { freqs: [400, 400, 1760], dur: 0.03, type: 'square', gain: 0.24, step: 0.05 },
+    achievement: { freqs: [420, 420, 420, 1760], dur: 0.04, type: 'square', gain: 0.26, step: 0.06 },
+    raceComplete: { freqs: [420, 420, 1760], dur: 0.04, type: 'square', gain: 0.26, step: 0.06 },
+    countdownTick: { freq: 440, dur: 0.03, type: 'square', gain: 0.22 },
+    countdownGo: { freq: 1760, dur: 0.14, type: 'square', gain: 0.3 },
+    chest: { freqs: [420, 420, 420, 1760], dur: 0.05, type: 'square', gain: 0.26, step: 0.05 },
+  },
+  marimba: {
+    // A real pentatonic scale (C-D-E-G-A), warm triangle tone.
+    correct: { freq: 587, dur: 0.1, type: 'triangle', gain: 0.18 },
+    error: { freq: 196, dur: 0.14, type: 'triangle', gain: 0.2 },
+    comboMilestone: { freqs: [523, 587, 659], dur: 0.14, type: 'triangle', gain: 0.2, step: 0.08 },
+    achievement: { freqs: [523, 587, 659, 784], dur: 0.2, type: 'triangle', gain: 0.22, step: 0.1 },
+    raceComplete: { freqs: [659, 784, 880], dur: 0.2, type: 'triangle', gain: 0.22, step: 0.11 },
+    countdownTick: { freq: 440, dur: 0.1, type: 'triangle', gain: 0.18 },
+    countdownGo: { freq: 659, dur: 0.28, type: 'triangle', gain: 0.26 },
+    chest: { freqs: [523, 587, 659, 784, 880], dur: 0.16, type: 'triangle', gain: 0.22, step: 0.09 },
+  },
 };
 
 export const AudioEngine = (function () {
