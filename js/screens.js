@@ -109,8 +109,10 @@ export function renderThemePicker() {
     sw.className = 'theme-swatch' + (!unlocked ? ' locked' : '') + (s.settings.theme === t.id ? ' selected' : '');
     sw.setAttribute('data-theme', t.id);
     sw.style.background = `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})`;
-    sw.innerHTML = `<span class="theme-swatch-icon">${icon(t.icon, { size: '1.7rem' })}</span>` +
-      (!unlocked ? `<span class="theme-swatch-lock">${icon('lock', { size: '.85rem' })}</span>` : '');
+    // No icon glyph on the swatch itself — the palette dots below
+    // already show the theme's real colors, so a symbol on top was
+    // just noise. The lock badge stays; that's state, not decoration.
+    sw.innerHTML = !unlocked ? `<span class="theme-swatch-lock">${icon('lock', { size: '.85rem' })}</span>` : '';
     if (!unlocked) {
       sw.title = 'Unlock via a chest — visit Rewards';
       sw.addEventListener('click', () => {

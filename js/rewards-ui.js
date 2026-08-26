@@ -19,7 +19,7 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-const CATEGORY_FALLBACK_ICON = { theme: 'palette', soundPack: 'speaker' };
+const CATEGORY_FALLBACK_ICON = { soundPack: 'speaker' };
 function itemIcon(category, item, opts) {
   const o = opts || {};
   if (category === 'car') {
@@ -30,8 +30,14 @@ function itemIcon(category, item, opts) {
     const h = o.big ? '3.8rem' : '2.6rem';
     return `<span class="icon-badge car-badge" style="width:${w};height:${h};">${carArt(item.id, item.colors, { width: '84%' })}</span>`;
   }
-  const name = item.icon || CATEGORY_FALLBACK_ICON[category] || 'star';
   const colors = item.colors || ['var(--accent)', 'var(--accent-2)'];
+  if (category === 'theme') {
+    // No icon glyph — the palette dots next to this badge already show
+    // the theme's real colors, so a symbol on top was redundant noise.
+    const box = o.box || '2.75rem';
+    return `<span class="icon-badge" style="width:${box};height:${box};background:linear-gradient(160deg, ${colors[0]}, ${colors[1]});"></span>`;
+  }
+  const name = item.icon || CATEGORY_FALLBACK_ICON[category] || 'star';
   return iconBadge(name, Object.assign({ bg: `linear-gradient(160deg, ${colors[0]}, ${colors[1]})` }, o));
 }
 
