@@ -20,7 +20,17 @@
 
    Dispatches a `race:finished` CustomEvent on window with the final
    run stats (echoing back `mode`) and does not assume what happens
-   after that — callers (solo or multiplayer) react to it.
+   after that — callers (solo or multiplayer) react to it. The run also
+   carries `rawWpm`/`consistency`/`timeline` (a per-second WPM/error
+   graph, for the results screen only — Store strips it before saving
+   to history) alongside the usual wpm/accuracy/chars.
+
+   Timed mode: passing `timedDurationSec` to `load()` races the clock
+   instead of the passage — the passage is just generated deliberately
+   long (see passages.js's pickTimedPassage) so nobody reasonably
+   reaches the end; `tick()` calls `finish()` once time's up, same as
+   `handleCorrect`/`handleIncorrect` already do at `pos >= text.length`
+   for a normal race (whichever happens first — `finished` guards both).
 ===================================================================== */
 import { AudioEngine } from './audio.js';
 import { Store } from './store.js';
@@ -34,6 +44,7 @@ export const Race = (function () {
   let text = '';
   let difficulty = 'easy';
   let mode = 'solo';
+  let timedDurationSec = null;
   let spans = [];
   let pos = 0;
   let mistakeCountAtPos = [];
@@ -44,6 +55,12 @@ export const Race = (function () {
   let finished = false;
   let comboLevel = 0;
   let progressHandler = null;
+  // Cumulative snapshots taken every tick (250ms) — raw material for
+  // the post-race WPM graph and consistency score. Kept separate from
+  // the HUD's own running-average wpm/accuracy so neither can regress
+  // the other.
+  let samples = [];
+  let errorTimes = [];
 
   const el = {
     container: document.getElementById('race-container'),
@@ -62,10 +79,12 @@ export const Race = (function () {
     text = passageObj.text;
     difficulty = passageObj.difficulty;
     mode = passageObj.mode || 'solo';
+    timedDurationSec = passageObj.timedDurationSec || null;
     pos = 0; combo = 0; bestCombo = 0; correctChars = 0; totalKeystrokes = 0;
     startTime = null; finished = false; comboLevel = 0;
     mistakeCountAtPos = new Array(text.length).fill(0);
     charSeen = {}; charMissed = {}; wordSeen = {}; wordMissed = {};
+    samples = []; errorTimes = [];
     el.container.classList.remove('combo-lvl-1', 'combo-lvl-2', 'combo-lvl-3');
     el.passage.innerHTML = '';
     spans = [];
@@ -100,6 +119,8 @@ export const Race = (function () {
 
   function tick() {
     if (!startTime || finished) return;
+    if (timedDurationSec && elapsedMinutes() * 60 >= timedDurationSec) { finish(); return; }
+    samples.push({ t: elapsedMinutes() * 60, correctChars, totalKeystrokes });
     updateHud();
   }
 
@@ -110,13 +131,22 @@ export const Race = (function () {
 
   function updateHud() {
     const mins = elapsedMinutes();
+    const secs = mins * 60;
     const wpm = mins > 0 ? Math.round((correctChars / 5) / mins) : 0;
     const acc = totalKeystrokes > 0 ? Math.round((correctChars / totalKeystrokes) * 1000) / 10 : 100;
     el.wpm.textContent = wpm;
     el.accuracy.textContent = acc + '%';
     el.combo.textContent = combo;
-    el.time.textContent = (mins * 60).toFixed(1) + 's';
-    el.progress.style.width = Math.round((pos / text.length) * 100) + '%';
+    // Timed mode counts down (and the bar tracks time remaining, not
+    // text remaining) — the passage itself is deliberately oversized
+    // padding, so "% of text typed" wouldn't mean anything there.
+    if (timedDurationSec) {
+      el.time.textContent = Math.max(0, timedDurationSec - secs).toFixed(1) + 's';
+      el.progress.style.width = Math.round(Math.min(1, secs / timedDurationSec) * 100) + '%';
+    } else {
+      el.time.textContent = secs.toFixed(1) + 's';
+      el.progress.style.width = Math.round((pos / text.length) * 100) + '%';
+    }
     if (progressHandler) progressHandler({ pos, textLength: text.length, wpm, accuracy: acc, done: pos >= text.length });
   }
 
@@ -169,6 +199,7 @@ export const Race = (function () {
   function handleIncorrect() {
     mistakeCountAtPos[pos] = 1;
     totalKeystrokes++;
+    errorTimes.push(elapsedMinutes() * 60);
     const ch = text[pos].toLowerCase();
     charSeen[ch] = (charSeen[ch] || 0) + 1;
     charMissed[ch] = (charMissed[ch] || 0) + 1;
@@ -187,7 +218,12 @@ export const Race = (function () {
   }
 
   function finishWordWeakness() {
-    const words = wordsWithIndex(text);
+    // Only what was actually typed (text.slice(0, pos)) — not the full
+    // passage. Harmless today since pos always equals text.length when
+    // this runs, but a timed race can finish with pos < text.length
+    // (the passage is deliberately padded past what anyone will type),
+    // and the untyped remainder must not count as "seen".
+    const words = wordsWithIndex(text.slice(0, pos));
     for (const { word, start, end } of words) {
       wordSeen[word] = (wordSeen[word] || 0) + 1;
       let hadMistake = false;
@@ -196,21 +232,63 @@ export const Race = (function () {
     }
   }
 
+  // One point per whole second of the race: the *instantaneous* wpm/raw
+  // for that second (chars typed during just that second), not the
+  // cumulative running average the HUD shows — this is what makes the
+  // graph show pacing/dips instead of a smoothed-out flat line. Error
+  // markers land on whichever second they happened in.
+  function buildTimeline() {
+    const totalSec = Math.max(1, Math.round(samples.length ? samples[samples.length - 1].t : 0));
+    const points = [];
+    let idx = 0;
+    let prevCorrect = 0, prevTotal = 0;
+    for (let sec = 1; sec <= totalSec; sec++) {
+      while (idx < samples.length - 1 && samples[idx + 1].t <= sec) idx++;
+      const snap = samples[idx] || { correctChars: 0, totalKeystrokes: 0 };
+      const dCorrect = snap.correctChars - prevCorrect;
+      const dTotal = snap.totalKeystrokes - prevTotal;
+      points.push({ t: sec, wpm: Math.max(0, Math.round((dCorrect / 5) * 60)), raw: Math.max(0, Math.round((dTotal / 5) * 60)) });
+      prevCorrect = snap.correctChars;
+      prevTotal = snap.totalKeystrokes;
+    }
+    const errorSeconds = [...new Set(errorTimes.map((t) => Math.max(1, Math.ceil(t))))];
+    return { points, errorSeconds };
+  }
+
+  // Standard coefficient-of-variation approach: how steady the pace was
+  // second to second, not just the average. 100 = perfectly even pace.
+  function computeConsistency(points) {
+    if (points.length < 2) return 100;
+    const wpms = points.map((p) => p.wpm);
+    const mean = wpms.reduce((a, b) => a + b, 0) / wpms.length;
+    if (mean <= 0) return 0;
+    const variance = wpms.reduce((a, b) => a + (b - mean) ** 2, 0) / wpms.length;
+    const cv = Math.sqrt(variance) / mean;
+    return Math.max(0, Math.min(100, Math.round(100 * (1 - cv))));
+  }
+
   function finish() {
     finished = true;
     clearInterval(tickHandle);
     el.input.blur();
     const mins = elapsedMinutes();
     const wpm = mins > 0 ? Math.round((correctChars / 5) / mins) : 0;
+    const rawWpm = mins > 0 ? Math.round((totalKeystrokes / 5) / mins) : 0;
     const acc = totalKeystrokes > 0 ? Math.round((correctChars / totalKeystrokes) * 1000) / 10 : 100;
     finishWordWeakness();
     Store.updateWeakness(charSeen, charMissed, wordSeen, wordMissed);
     AudioEngine.raceComplete();
+    const timeline = buildTimeline();
     const run = {
       date: new Date().toISOString(),
-      wpm, accuracy: acc, bestCombo, difficulty, mode,
+      wpm, rawWpm, accuracy: acc, consistency: computeConsistency(timeline.points), bestCombo, difficulty, mode,
+      timedDurationSec,
       durationSec: Math.round(mins * 600) / 10,
-      chars: text.length,
+      // Actual characters typed, not the full passage length — was
+      // always equivalent before (finish() only fired at pos ===
+      // text.length), but a timed race can end early.
+      chars: pos,
+      timeline,
     };
     window.dispatchEvent(new CustomEvent('race:finished', { detail: run }));
   }

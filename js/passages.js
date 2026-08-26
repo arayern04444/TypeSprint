@@ -18,6 +18,13 @@ export const LENGTHS = [
   { id: 'long', name: 'Long', sentences: 3 },
 ];
 
+// Timed mode races the clock instead of a fixed passage. Rather than
+// truly streaming endless text, we generate a passage deliberately
+// long enough that essentially nobody reaches the end before time's
+// up (see pickTimedPassage) — Race then ends the race on the clock
+// (see race.js), not on reaching the end of the text.
+export const TIMED_DURATIONS = [15, 30, 60, 120];
+
 export const PASSAGE_BANK = {
   easy: [
     "the quick brown fox jumps over the lazy dog",
@@ -134,6 +141,30 @@ export function pickPassage(tier, length) {
     remaining.splice(remaining.indexOf(pick), 1);
   }
   return { text: parts.join(' '), difficulty: resolvedTier, length: lengthMeta.id };
+}
+
+// Deliberately generous — assumes an unrealistic ~180 WPM sustained
+// (15 chars/sec) so virtually nobody reaches the end of the generated
+// passage before the timer does.
+const TIMED_CHARS_PER_SEC_CEILING = 15;
+
+export function pickTimedPassage(tier, durationSec) {
+  const s = Store.load();
+  let resolvedTier = tier;
+  if (tier === 'auto') resolvedTier = s.settings.autoTier || 'easy';
+  const list = PASSAGE_BANK[resolvedTier] || PASSAGE_BANK.easy;
+  const targetChars = durationSec * TIMED_CHARS_PER_SEC_CEILING;
+  let remaining = list.slice();
+  const parts = [];
+  let total = 0;
+  while (total < targetChars) {
+    if (remaining.length === 0) remaining = list.slice(); // bank exhausted — repeats are fine for a timed test
+    const pick = pickWeighted(remaining, s);
+    parts.push(pick);
+    total += pick.length + 1;
+    remaining.splice(remaining.indexOf(pick), 1);
+  }
+  return { text: parts.join(' '), difficulty: resolvedTier, timedDurationSec: durationSec };
 }
 
 export function adjustAutoTier(run) {

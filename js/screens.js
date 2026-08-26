@@ -6,7 +6,7 @@
 import { Store } from './store.js';
 import { Themes, THEMES } from './themes.js';
 import { ACHIEVEMENTS } from './achievements.js';
-import { LENGTHS } from './passages.js';
+import { LENGTHS, TIMED_DURATIONS } from './passages.js';
 import { showToast } from './toast.js';
 import { icon, iconBadge } from './icons.js';
 
@@ -32,11 +32,58 @@ export function renderDifficultyPicker() {
   }
 }
 
+const RACE_MODES = [
+  { id: 'passage', label: 'Classic' },
+  { id: 'timed', label: 'Timed' },
+];
+
+export function renderRaceModePicker() {
+  const s = Store.load();
+  const row = document.getElementById('race-mode-row');
+  if (!row) return;
+  row.innerHTML = '';
+  for (const m of RACE_MODES) {
+    const btn = document.createElement('button');
+    btn.className = 'btn' + (s.settings.raceMode === m.id ? ' active' : '');
+    btn.textContent = m.label;
+    btn.addEventListener('click', () => {
+      s.settings.raceMode = m.id;
+      Store.save();
+      renderRaceModePicker();
+      renderLengthPicker(); // the Length card swaps to a Duration card in Timed mode
+    });
+    row.appendChild(btn);
+  }
+}
+
+// Doubles as the Length picker (Classic mode) and the Duration picker
+// (Timed mode) — same card, same button-row pattern, just swapped
+// based on the current race mode, so no new visual language.
 export function renderLengthPicker() {
   const s = Store.load();
   const row = document.getElementById('length-row');
   if (!row) return;
+  const title = document.getElementById('length-card-title');
+  const hint = document.getElementById('length-card-hint');
   row.innerHTML = '';
+  if (s.settings.raceMode === 'timed') {
+    if (title) title.textContent = 'Duration';
+    if (hint) hint.textContent = 'Type for the whole duration. Longer times and harder difficulties earn more keys.';
+    for (const d of TIMED_DURATIONS) {
+      const btn = document.createElement('button');
+      btn.className = 'btn' + (s.settings.timedDuration === d ? ' active' : '');
+      btn.textContent = d + 's';
+      btn.addEventListener('click', () => {
+        s.settings.timedDuration = d;
+        Store.save();
+        renderLengthPicker();
+      });
+      row.appendChild(btn);
+    }
+    return;
+  }
+  if (title) title.textContent = 'Length';
+  if (hint) hint.textContent = 'Longer and harder passages earn more keys.';
   for (const l of LENGTHS) {
     const btn = document.createElement('button');
     btn.className = 'btn' + (s.settings.length === l.id ? ' active' : '');
@@ -165,6 +212,33 @@ export function renderSparkline(container, history) {
     <polyline points="${polyPoints}" />${circles}</svg>`;
 }
 
+// The just-finished race's own pacing — one point per second, net WPM
+// and raw WPM, with a marker on any second a mistake happened. Distinct
+// from renderSparkline above (that one tracks WPM across many *past*
+// races, not the internals of a single one) — same hand-rolled inline-
+// SVG technique, no charting library.
+function renderRaceGraph(container, run) {
+  const points = (run.timeline && run.timeline.points) || [];
+  if (points.length < 2) { container.innerHTML = ''; return; }
+  const errorSeconds = new Set((run.timeline && run.timeline.errorSeconds) || []);
+  const w = 600, h = 120, pad = 10;
+  const maxWpm = Math.max(...points.map((p) => Math.max(p.wpm, p.raw)), 10);
+  const stepX = (w - pad * 2) / (points.length - 1);
+  const xAt = (i) => pad + i * stepX;
+  const yAt = (wpm) => h - pad - (wpm / maxWpm) * (h - pad * 2);
+  const line = (key) => points.map((p, i) => `${xAt(i)},${yAt(p[key])}`).join(' ');
+  const errorDots = points
+    .map((p, i) => ({ p, i }))
+    .filter(({ p }) => errorSeconds.has(p.t))
+    .map(({ p, i }) => `<circle class="err" cx="${xAt(i)}" cy="${yAt(p.wpm)}" r="3.5"><title>Mistake at ${p.t}s</title></circle>`)
+    .join('');
+  container.innerHTML = `<svg class="race-graph" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline class="raw" points="${line('raw')}" />
+    <polyline class="net" points="${line('wpm')}" />
+    ${errorDots}
+  </svg>`;
+}
+
 export function showResults(run, unlocks, keysEarned) {
   const s = Store.load();
   document.getElementById('results-wpm').textContent = run.wpm;
@@ -185,6 +259,8 @@ export function showResults(run, unlocks, keysEarned) {
   const grid = document.getElementById('results-stat-grid');
   const stats = [
     { v: run.accuracy + '%', l: 'Accuracy' },
+    { v: run.rawWpm != null ? run.rawWpm : run.wpm, l: 'Raw WPM' },
+    { v: (run.consistency != null ? run.consistency : 100) + '%', l: 'Consistency' },
     { v: run.bestCombo, l: 'Best Combo' },
     { v: run.durationSec + 's', l: 'Duration' },
     { v: run.chars, l: 'Characters' },
@@ -192,6 +268,7 @@ export function showResults(run, unlocks, keysEarned) {
   ];
   grid.innerHTML = stats.map((st, i) => `<div class="stat-card" style="animation-delay:${i * 0.08}s">
     <div class="v">${st.v}</div><div class="l">${st.l}</div></div>`).join('');
+  renderRaceGraph(document.getElementById('results-race-graph'), run);
 
   const unlockWrap = document.getElementById('results-unlocks');
   const chips = unlocks.newlyUnlocked.map(a => `<div class="unlock-chip"><span class="ic">${a.icon}</span>${a.name} (+${a.keyReward} keys)</div>`);

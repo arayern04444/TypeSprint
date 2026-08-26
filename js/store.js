@@ -48,7 +48,10 @@ function mergeDefaults(defaults, loaded) {
 function defaultState() {
   return {
     version: 1,
-    settings: { theme: 'default', difficulty: 'easy', length: 'short', soundOn: true, soundPack: 'default', car: 'default' },
+    settings: {
+      theme: 'default', difficulty: 'easy', length: 'short', raceMode: 'passage', timedDuration: 30,
+      soundOn: true, soundPack: 'default', car: 'default',
+    },
     bestWpm: 0,
     bestAccuracy: 0,
     totalRaces: 0,
@@ -131,7 +134,13 @@ export const Store = (function () {
     mem.totalRaces += 1;
     mem.bestWpm = Math.max(mem.bestWpm, run.wpm);
     mem.bestAccuracy = Math.max(mem.bestAccuracy, run.accuracy);
-    mem.history.push(run);
+    // `timeline` (the per-race WPM/error graph data) is only needed to
+    // draw that one race's graph right after it finishes — it's not
+    // useful once buried in history, and at ~30-120+ points per race it
+    // would otherwise bloat every saved run for no benefit. Strip it
+    // here so it never reaches localStorage.
+    const { timeline, ...runForHistory } = run;
+    mem.history.push(runForHistory);
     if (mem.history.length > HISTORY_CAP) mem.history.shift();
     mem.stats.wpmTotal += run.wpm;
     const isPerfect = run.accuracy >= 100;

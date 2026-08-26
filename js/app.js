@@ -9,14 +9,15 @@ import { AudioEngine } from './audio.js';
 import { Race } from './race.js';
 import { Themes } from './themes.js';
 import { icon } from './icons.js';
-import { pickPassage, adjustAutoTier } from './passages.js';
+import { pickPassage, pickTimedPassage, adjustAutoTier } from './passages.js';
 import { AchievementsEngine } from './achievements.js';
 import { Router } from './router.js';
 import {
-  renderDifficultyPicker, renderLengthPicker, renderThemePicker, renderHeaderBadge, renderSoundToggle,
-  renderSparkline, renderHistoryTable, renderLifetimeStats, renderAchievementsGrid, showResults,
+  renderDifficultyPicker, renderLengthPicker, renderRaceModePicker, renderThemePicker, renderHeaderBadge,
+  renderSoundToggle, renderSparkline, renderHistoryTable, renderLifetimeStats, renderAchievementsGrid, showResults,
 } from './screens.js';
 import { initRewardsUI, renderRewardsScreen } from './rewards-ui.js';
+import { initLeaderboardUI, renderLeaderboardScreen, setPendingSubmitRun } from './leaderboard-ui.js';
 import { showToast } from './toast.js';
 import { Auth } from './auth.js';
 import { Multiplayer } from './multiplayer.js';
@@ -47,6 +48,7 @@ function renderAccountBadge() {
 let countdownHandle = null;
 
 function onMenu() {
+  renderRaceModePicker();
   renderDifficultyPicker();
   renderLengthPicker();
   renderThemePicker();
@@ -109,7 +111,9 @@ function onRace() {
   if (Multiplayer.room) return; // multiplayer entry is driven by enterMultiplayerRace() instead
   document.getElementById('mp-track').classList.remove('active');
   const s = Store.load();
-  const passage = pickPassage(s.settings.difficulty, s.settings.length);
+  const passage = s.settings.raceMode === 'timed'
+    ? pickTimedPassage(s.settings.difficulty, s.settings.timedDuration)
+    : pickPassage(s.settings.difficulty, s.settings.length);
   Race.load(passage);
 }
 
@@ -127,6 +131,7 @@ Router.setHooks({
   menu: onMenu, countdown: onCountdown, race: onRace, results: null, history: onHistory,
   achievements: onAchievements, rewards: renderRewardsScreen, 'multiplayer-home': renderMultiplayerHome,
   room: renderRoomScreen, 'race-multiplayer-results': renderMultiplayerResultsScreen,
+  leaderboard: renderLeaderboardScreen,
 });
 
 /* ---- race:finished pipeline ---- */
@@ -144,6 +149,7 @@ window.addEventListener('race:finished', async (e) => {
     await Multiplayer.submitResult(run);
     Router.goTo('race-multiplayer-results');
   } else {
+    setPendingSubmitRun(run);
     Router.goTo('results');
     showResults(run, unlocks, keysEarned);
   }
@@ -180,6 +186,7 @@ document.getElementById('results-share-btn').addEventListener('click', () => {
 document.getElementById('results-history-btn').addEventListener('click', () => Router.goTo('history'));
 document.getElementById('goto-history-btn').addEventListener('click', () => Router.goTo('history'));
 document.getElementById('goto-achievements-btn').addEventListener('click', () => Router.goTo('achievements'));
+document.getElementById('goto-leaderboard-btn').addEventListener('click', () => Router.goTo('leaderboard'));
 document.getElementById('history-back-btn').addEventListener('click', () => Router.goTo('menu'));
 document.getElementById('achievements-back-btn').addEventListener('click', () => Router.goTo('menu'));
 
@@ -234,6 +241,7 @@ window.addEventListener('resize', () => {
   renderAccountBadge();
   initMultiplayerUI();
   initRewardsUI();
+  initLeaderboardUI();
   Router.goTo('menu');
   // Session restore can take a moment (network round-trip); the UI is
   // already usable for solo play before this resolves.
