@@ -673,17 +673,15 @@
     </div>
     <div class="stat-grid" id="results-stat-grid"></div>
     <div id="results-unlocks"></div>
-    <div class="card" id="results-leaderboard-card">
-      <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.6rem;">
-        <div>
-          <div class="section-title" style="margin-bottom:.2rem;">Leaderboard</div>
-          <div class="hint" id="results-leaderboard-hint">Optional — submit this run to the public leaderboard.</div>
-        </div>
-        <button class="btn btn-ghost" id="results-leaderboard-submit-btn"><span data-icon="medal"></span> Submit to Leaderboard</button>
-      </div>
+    <!-- Hidden by default — only shown when this run actually places in
+         the Top 100 for its bucket (see js/leaderboard-ui.js checkAndAutoSubmit).
+         No manual "submit" step: a qualifying run is added automatically. -->
+    <div class="card" id="results-leaderboard-card" style="display:none;">
+      <div class="section-title" style="margin-bottom:.2rem;">Leaderboard</div>
+      <div class="hint" id="results-leaderboard-status"></div>
       <div class="row" id="results-leaderboard-nickname-row" style="display:none; margin-top:.6rem;">
         <input class="text-input" id="results-leaderboard-nickname" placeholder="Pick a nickname" maxlength="20">
-        <button class="btn-primary" id="results-leaderboard-confirm-btn">Submit ▶</button>
+        <button class="btn-primary" id="results-leaderboard-confirm-btn">Claim Spot ▶</button>
       </div>
       <div class="form-error" id="results-leaderboard-error"></div>
     </div>

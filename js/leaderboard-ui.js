@@ -91,53 +91,69 @@ export async function renderLeaderboardScreen() {
   loadAndRenderList();
 }
 
-/* ---- "Submit to Leaderboard" on the solo results screen ---- */
-// Called by app.js's race:finished handler right before showResults(),
-// so the submit button always has the run it'd actually submit.
-export function setPendingSubmitRun(run) {
-  pendingRun = run;
-  el('results-leaderboard-nickname-row').style.display = 'none';
-  el('results-leaderboard-error').textContent = '';
-  const btn = el('results-leaderboard-submit-btn');
-  btn.style.display = 'inline-flex';
-  btn.disabled = false;
-  btn.innerHTML = icon('medal') + ' Submit to Leaderboard';
+/* ---- automatic Top-100 detection on the solo results screen ---- */
+function showLeaderboardCard(html) {
+  el('results-leaderboard-card').style.display = 'block';
+  el('results-leaderboard-status').innerHTML = html;
 }
 
-async function doSubmit() {
-  if (!pendingRun) return;
-  const btn = el('results-leaderboard-submit-btn');
-  btn.disabled = true;
-  const { error } = await Leaderboard.submit(pendingRun);
+function hideLeaderboardCard() {
+  el('results-leaderboard-card').style.display = 'none';
+}
+
+// `silent` — used for the fully-automatic path (a nickname already
+// exists, nothing the player did prompted this attempt): a backend
+// hiccup there should degrade quietly rather than surface a scary
+// error on a screen the player didn't ask anything of. The one
+// interactive path (just typed a name and hit "Claim Spot") still
+// shows a real error, since that follows an explicit action.
+async function doAutoSubmit(run, { silent } = {}) {
+  const { error } = await Leaderboard.submit(run);
   if (error) {
-    el('results-leaderboard-error').textContent = error.message;
-    btn.disabled = false;
+    if (silent) console.warn('TypeSprint: leaderboard auto-submit failed:', error.message);
+    else el('results-leaderboard-error').textContent = error.message;
     return;
   }
-  btn.innerHTML = icon('check') + ' Submitted!';
+  const modeLabel = run.timedDurationSec ? `Timed ${run.timedDurationSec}s` : 'Classic';
+  showLeaderboardCard(`${icon('medal')} You made the Top 100 for ${run.difficulty} · ${modeLabel} — added automatically!`);
+  showToast(icon('medal'), 'Top 100!', 'Your run was added to the leaderboard.', { info: true, silent: true });
+}
+
+// Called by app.js's race:finished handler right after a solo race —
+// no button to click. Checks whether this run would actually place in
+// the Top 100 for its own (difficulty, mode, duration) bucket, and
+// submits it automatically if so. The only time this is ever
+// interactive is a player's very first qualifying run, when there's no
+// guest nickname yet to submit under — nothing else to do about that,
+// there's genuinely no identity to attach the score to otherwise.
+export async function checkAndAutoSubmit(run) {
+  pendingRun = run;
+  hideLeaderboardCard();
   el('results-leaderboard-nickname-row').style.display = 'none';
-  showToast(icon('medal'), 'Submitted!', 'Your run is on the leaderboard.', { info: true, silent: true });
+  el('results-leaderboard-error').textContent = '';
+
+  const raceMode = run.timedDurationSec ? 'timed' : 'passage';
+  const top = await Leaderboard.fetchTop({ raceMode, difficulty: run.difficulty, timedDurationSec: run.timedDurationSec, limit: 100 });
+  const qualifies = top.length < 100 || run.wpm > top[top.length - 1].wpm;
+  if (!qualifies) return; // not Top 100 yet this run — nothing to show, no clutter
+
+  if (Auth.isSignedIn && Auth.nickname) {
+    await doAutoSubmit(run, { silent: true });
+    return;
+  }
+  showLeaderboardCard(`${icon('medal')} You're Top 100 material! Pick a nickname to claim your spot:`);
+  el('results-leaderboard-nickname-row').style.display = 'flex';
 }
 
 export function initLeaderboardUI() {
   el('leaderboard-back-btn').addEventListener('click', () => Router.goTo('menu'));
-
-  el('results-leaderboard-submit-btn').addEventListener('click', () => {
-    if (!pendingRun) return;
-    if (Auth.isSignedIn && Auth.nickname) { doSubmit(); return; }
-    // No guest identity yet (never played multiplayer/leaderboard
-    // before) — reveal a small inline nickname field, same idea as
-    // multiplayer's own nickname prompt, just relocated here.
-    el('results-leaderboard-nickname').value = '';
-    el('results-leaderboard-error').textContent = '';
-    el('results-leaderboard-nickname-row').style.display = 'flex';
-  });
 
   el('results-leaderboard-confirm-btn').addEventListener('click', async () => {
     const nickname = el('results-leaderboard-nickname').value.trim();
     if (nickname.length < 2) { el('results-leaderboard-error').textContent = 'Pick a name (2+ characters) first.'; return; }
     const { error } = await Auth.playAsGuest(nickname);
     if (error) { el('results-leaderboard-error').textContent = error.message; return; }
-    await doSubmit();
+    el('results-leaderboard-nickname-row').style.display = 'none';
+    if (pendingRun) await doAutoSubmit(pendingRun);
   });
 }

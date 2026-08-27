@@ -44,8 +44,14 @@ export const Leaderboard = {
     const { data, error } = await supabase.rpc('get_leaderboard', {
       p_race_mode: raceMode,
       p_difficulty: difficulty,
-      p_timed_duration_sec: timedDurationSec || null,
-      p_limit: limit || 50,
+      // Classic-mode rows always store timed_duration_sec = null (see
+      // submit() below) — passing a stale duration through here even
+      // when raceMode isn't 'timed' meant `timed_duration_sec = 30`
+      // never matched a null column, so every Classic submission was
+      // silently filtered out of every leaderboard view. Only ever
+      // filter by duration when actually looking at Timed mode.
+      p_timed_duration_sec: raceMode === 'timed' ? (timedDurationSec || null) : null,
+      p_limit: limit || 100,
     });
     if (error) return [];
     return data || [];

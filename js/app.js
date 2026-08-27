@@ -17,7 +17,7 @@ import {
   renderSoundToggle, renderSparkline, renderHistoryTable, renderLifetimeStats, renderAchievementsGrid, showResults,
 } from './screens.js';
 import { initRewardsUI, renderRewardsScreen } from './rewards-ui.js';
-import { initLeaderboardUI, renderLeaderboardScreen, setPendingSubmitRun } from './leaderboard-ui.js';
+import { initLeaderboardUI, renderLeaderboardScreen, checkAndAutoSubmit } from './leaderboard-ui.js';
 import { showToast } from './toast.js';
 import { Auth } from './auth.js';
 import { Multiplayer } from './multiplayer.js';
@@ -149,9 +149,9 @@ window.addEventListener('race:finished', async (e) => {
     await Multiplayer.submitResult(run);
     Router.goTo('race-multiplayer-results');
   } else {
-    setPendingSubmitRun(run);
     Router.goTo('results');
     showResults(run, unlocks, keysEarned);
+    checkAndAutoSubmit(run); // async, non-blocking — the leaderboard card pops in if this run qualifies
   }
 });
 
